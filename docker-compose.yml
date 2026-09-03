@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: managementsystem_db
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Password123
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+
+  backend:
+    build:
+      context: ./Backend/ManagementSystem
+      dockerfile: Dockerfile
+    container_name: managementsystem_api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=ManagementSystem;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;
+      - Jwt__Key=ManagementSystemSuperSecretSecureSigningKey2025!@#$%^&*
+      - Jwt__Issuer=ManagementSystemAPI
+      - Jwt__Audience=ManagementSystemClient
+      - Jwt__ExpiryMinutes=1440
+    ports:
+      - "5000:5000"
+    depends_on:
+      - sqlserver
+
+  frontend:
+    build:
+      context: ./Frontend/ManagementSystemUI
+      dockerfile: Dockerfile
+    container_name: managementsystem_ui
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+
+volumes:
+  sqlserver_data:
