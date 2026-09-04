@@ -2,7 +2,9 @@ import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TaskItem } from '../../core/models/task.model';
+import { Team } from '../../core/models/team.model';
 import { TaskService } from '../../core/services/task.service';
+import { TeamService } from '../../core/services/team.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { TaskDetailModalComponent } from '../tasks/task-detail-modal.component';
@@ -30,6 +32,32 @@ interface CalendarDay {
   imports: [CommonModule, FormsModule, TaskDetailModalComponent],
   template: `
     <div class="schedule-page">
+      <!-- Role-Based Calendar Scope Banner -->
+      <div class="role-scope-banner" [ngClass]="'scope-' + (authService.userRole() | lowercase)">
+        <div class="scope-icon-wrap">
+          <i *ngIf="authService.isAdmin()" class="fa-solid fa-shield-halved"></i>
+          <i *ngIf="authService.isManager() && !authService.isAdmin()" class="fa-solid fa-user-tie"></i>
+          <i *ngIf="!authService.isManager()" class="fa-solid fa-user-check"></i>
+        </div>
+        <div class="scope-text-wrap">
+          <div class="scope-title-row">
+            <strong *ngIf="authService.isAdmin()">Enterprise Admin Calendar Scope</strong>
+            <strong *ngIf="authService.isManager() && !authService.isAdmin()">Team Manager Calendar Scope</strong>
+            <strong *ngIf="!authService.isManager()">Personal Member Deliverables Scope</strong>
+            <span class="scope-pill-tag">{{ authService.userRole() }}</span>
+          </div>
+          <p *ngIf="authService.isAdmin()">
+            Viewing all scheduled deliverables across all departments, teams, and employees.
+          </p>
+          <p *ngIf="authService.isManager() && !authService.isAdmin()">
+            Viewing scheduled deliverables strictly for your managed teams and supervised team members.
+          </p>
+          <p *ngIf="!authService.isManager()">
+            Viewing only your personal assigned deliverables and deadlines ({{ authService.currentUser()?.fullName }}).
+          </p>
+        </div>
+      </div>
+
       <!-- Hero Header & Global Date Controls -->
       <div class="schedule-hero card">
         <div class="hero-left">
@@ -137,8 +165,8 @@ interface CalendarDay {
           </div>
         </div>
 
-        <!-- Assignee Dropdown Filter -->
-        <div class="overview-right" *ngIf="tasksForSelectedDate().length > 0">
+        <!-- Assignee Dropdown Filter (Visible only for Managers & Admins) -->
+        <div class="overview-right" *ngIf="tasksForSelectedDate().length > 0 && authService.isManager()">
           <div class="assignee-select-wrap">
             <i class="fa-solid fa-user-filter text-primary"></i>
             <select 
@@ -146,18 +174,25 @@ interface CalendarDay {
               [(ngModel)]="selectedAssigneeId"
               (ngModelChange)="applyAssigneeFilter()"
             >
-              <option [ngValue]="null">All Members ({{ tasksForSelectedDate().length }} tasks)</option>
+              <option [ngValue]="null">All Managed Members ({{ tasksForSelectedDate().length }} tasks)</option>
               <option *ngFor="let assignee of assigneesOnSelectedDate()" [ngValue]="assignee.userId">
                 {{ assignee.userName }} ({{ assignee.count }} {{ assignee.count === 1 ? 'task' : 'tasks' }})
               </option>
             </select>
           </div>
         </div>
+
+        <!-- Personal Deliverables Tag for Standard Users -->
+        <div class="overview-right" *ngIf="!authService.isManager()">
+          <span class="user-scope-indicator">
+            <i class="fa-solid fa-user-check"></i> Your Personal Deliverables
+          </span>
+        </div>
       </div>
 
-      <!-- Assignee Quick Filter Pills -->
-      <div class="assignee-pills-wrap" *ngIf="assigneesOnSelectedDate().length > 1">
-        <span class="pills-legend">Filter by Assignee:</span>
+      <!-- Assignee Quick Filter Pills (Manager & Admin only) -->
+      <div class="assignee-pills-wrap" *ngIf="authService.isManager() && assigneesOnSelectedDate().length > 1">
+        <span class="pills-legend">Filter by Team Member:</span>
         <div class="pills-list">
           <button 
             type="button" 
@@ -266,6 +301,112 @@ interface CalendarDay {
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
+    }
+
+    /* Role Scope Banner */
+    .role-scope-banner {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      padding: 1.125rem 1.5rem;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--slate-200);
+      background: #ffffff;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+    }
+
+    .scope-admin {
+      border-left: 5px solid #7c3aed;
+      background: linear-gradient(135deg, #ffffff, #faf5ff);
+    }
+
+    .scope-manager {
+      border-left: 5px solid #0284c7;
+      background: linear-gradient(135deg, #ffffff, #f0f9ff);
+    }
+
+    .scope-user {
+      border-left: 5px solid #059669;
+      background: linear-gradient(135deg, #ffffff, #ecfdf5);
+    }
+
+    .scope-icon-wrap {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .scope-admin .scope-icon-wrap {
+      background: #f5f3ff;
+      color: #7c3aed;
+      border: 1px solid #ddd6fe;
+    }
+
+    .scope-manager .scope-icon-wrap {
+      background: #f0f9ff;
+      color: #0284c7;
+      border: 1px solid #bae6fd;
+    }
+
+    .scope-user .scope-icon-wrap {
+      background: #ecfdf5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+    }
+
+    .scope-text-wrap {
+      flex: 1;
+    }
+
+    .scope-title-row {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .scope-title-row strong {
+      font-size: 0.9375rem;
+      color: var(--slate-900);
+      font-weight: 800;
+    }
+
+    .scope-pill-tag {
+      font-size: 0.6875rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.125rem 0.5rem;
+      border-radius: var(--radius-full);
+      background: var(--slate-100);
+      color: var(--slate-700);
+      border: 1px solid var(--slate-300);
+    }
+
+    .scope-text-wrap p {
+      font-size: 0.8125rem;
+      color: var(--slate-600);
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .user-scope-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.4rem 0.875rem;
+      border-radius: var(--radius-full);
     }
 
     /* Hero Card */
@@ -934,10 +1075,12 @@ interface CalendarDay {
 })
 export class TaskScheduleComponent implements OnInit {
   private taskService = inject(TaskService);
-  private authService = inject(AuthService);
+  private teamService = inject(TeamService);
+  public authService = inject(AuthService);
   private toast = inject(ToastService);
 
   allTasks = signal<TaskItem[]>([]);
+  teams = signal<Team[]>([]);
   loading = signal<boolean>(true);
 
   // Selected date ISO string formatted as YYYY-MM-DD
@@ -951,6 +1094,49 @@ export class TaskScheduleComponent implements OnInit {
   selectedTaskForPopup = signal<TaskItem | null>(null);
 
   selectedDate = computed(() => new Date(this.selectedDateString() + 'T00:00:00'));
+
+  /**
+   * Set of team IDs managed by the currently logged-in manager.
+   */
+  managedTeamIds = computed(() => {
+    const user = this.authService.currentUser();
+    if (!user) return new Set<number>();
+    return new Set(
+      this.teams()
+        .filter(t => t.managerId === user.id)
+        .map(t => t.id)
+    );
+  });
+
+  /**
+   * Role-based task scoping for calendar:
+   * - Admin: Full enterprise view (all tasks across all teams).
+   * - Manager: Only tasks in teams managed by the manager or assigned to the manager.
+   * - User: Strictly only tasks assigned to the current user.
+   */
+  scopedTasks = computed(() => {
+    const tasks = this.allTasks();
+    const user = this.authService.currentUser();
+    if (!user) return [];
+
+    // 1. Admin: View all tasks
+    if (this.authService.isAdmin()) {
+      return tasks;
+    }
+
+    // 2. Manager: View tasks belonging to managed teams or assigned to manager
+    if (this.authService.isManager()) {
+      const managedIds = this.managedTeamIds();
+      return tasks.filter(t => 
+        (t.teamId && managedIds.has(t.teamId)) ||
+        t.assignedToUserId === user.id ||
+        t.createdById === user.id
+      );
+    }
+
+    // 3. User: Only view tasks assigned directly to the current user
+    return tasks.filter(t => t.assignedToUserId === user.id);
+  });
 
   /**
    * Generates the 7 days of the active week corresponding to the selected date.
@@ -985,7 +1171,7 @@ export class TaskScheduleComponent implements OnInit {
 
   availableTaskDates = computed(() => {
     const dateSet = new Set<string>();
-    for (const task of this.allTasks()) {
+    for (const task of this.scopedTasks()) {
       const dateKey = this.extractTaskDateKey(task);
       if (dateKey) dateSet.add(dateKey);
     }
@@ -994,7 +1180,7 @@ export class TaskScheduleComponent implements OnInit {
 
   tasksForSelectedDate = computed(() => {
     const currentKey = this.selectedDateString();
-    return this.allTasks().filter(t => this.extractTaskDateKey(t) === currentKey);
+    return this.scopedTasks().filter(t => this.extractTaskDateKey(t) === currentKey);
   });
 
   assigneesOnSelectedDate = computed<DayAssigneeSummary[]>(() => {
@@ -1026,6 +1212,10 @@ export class TaskScheduleComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.teamService.getTeams().subscribe({
+      next: (teams) => this.teams.set(teams),
+      error: () => {}
+    });
     this.reloadAllTasks();
   }
 
@@ -1080,7 +1270,7 @@ export class TaskScheduleComponent implements OnInit {
   }
 
   getTaskCountForDate(dateKey: string): number {
-    return this.allTasks().filter(t => this.extractTaskDateKey(t) === dateKey).length;
+    return this.scopedTasks().filter(t => this.extractTaskDateKey(t) === dateKey).length;
   }
 
   private extractTaskDateKey(task: TaskItem): string {

@@ -74,6 +74,10 @@ import { NotificationService } from '../../core/services/notification.service';
             <p>{{ user.email }}</p>
           </div>
         </div>
+        <div class="system-status-indicator">
+          <span class="status-dot"></span>
+          <span>API Connected & Online</span>
+        </div>
         <button class="logout-btn" (click)="authService.logout()" title="Logout">
           <i class="fa-solid fa-right-from-bracket"></i>
           <span>Logout</span>
@@ -231,6 +235,27 @@ import { NotificationService } from '../../core/services/notification.service';
       overflow: hidden;
       text-overflow: ellipsis;
       max-width: 140px;
+    }
+
+    .system-status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.5rem;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: var(--radius-sm);
+      font-size: 0.6875rem;
+      color: #6ee7b7;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background: #10b981;
+      border-radius: var(--radius-full);
+      box-shadow: 0 0 6px #10b981;
     }
 
     .logout-btn {

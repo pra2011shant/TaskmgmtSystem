@@ -14,18 +14,79 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
       <!-- Top Welcome Banner -->
       <div class="welcome-card">
         <div class="welcome-content">
-          <span class="role-pill-badge">{{ authService.userRole() }} Workspace</span>
-          <h2>Hello, {{ authService.currentUser()?.fullName }} 👋</h2>
-          <p>Here is an overview of your team's current tasks, progress, and upcoming deadlines.</p>
+          <div class="welcome-badge-row">
+            <span class="role-pill-badge">{{ authService.userRole() }} Workspace</span>
+            <span class="greeting-pill"><i class="fa-regular fa-sun"></i> {{ getTimeGreeting() }}</span>
+          </div>
+          <h2>Welcome, {{ authService.currentUser()?.fullName }} 👋</h2>
+          <p>Here is your real-time management control center. Monitor progress, assignments, and workflows.</p>
         </div>
         <div class="welcome-actions">
           <a routerLink="/tasks" class="btn btn-primary">
-            <i class="fa-solid fa-list-check"></i> View All Tasks
+            <i class="fa-solid fa-table-columns"></i> Open Kanban
           </a>
-          <a routerLink="/teams" class="btn btn-secondary" *ngIf="authService.isManager()">
-            <i class="fa-solid fa-users"></i> Manage Teams
+          <a routerLink="/schedule" class="btn btn-secondary">
+            <i class="fa-regular fa-calendar-days"></i> Timeline Schedule
           </a>
         </div>
+      </div>
+
+      <!-- Quick Action Launchpad (User Friendly Shortcuts) -->
+      <div class="quick-launchpad">
+        <a routerLink="/tasks" class="launchpad-card">
+          <div class="launchpad-icon icon-tasks">
+            <i class="fa-solid fa-list-check"></i>
+          </div>
+          <div class="launchpad-info">
+            <h4>Kanban Board</h4>
+            <p>Drag, filter & track tasks</p>
+          </div>
+          <i class="fa-solid fa-arrow-right launchpad-arrow"></i>
+        </a>
+
+        <a routerLink="/schedule" class="launchpad-card">
+          <div class="launchpad-icon icon-calendar">
+            <i class="fa-regular fa-calendar-check"></i>
+          </div>
+          <div class="launchpad-info">
+            <h4>Daily Schedule</h4>
+            <p>Date-wise work timeline</p>
+          </div>
+          <i class="fa-solid fa-arrow-right launchpad-arrow"></i>
+        </a>
+
+        <a routerLink="/teams" class="launchpad-card">
+          <div class="launchpad-icon icon-teams">
+            <i class="fa-solid fa-users-rectangle"></i>
+          </div>
+          <div class="launchpad-info">
+            <h4>Team Hub</h4>
+            <p>Collaborate with members</p>
+          </div>
+          <i class="fa-solid fa-arrow-right launchpad-arrow"></i>
+        </a>
+
+        <a routerLink="/users" class="launchpad-card" *ngIf="authService.isAdmin()">
+          <div class="launchpad-icon icon-admin-tool">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div class="launchpad-info">
+            <h4>User Directory</h4>
+            <p>Manage all accounts</p>
+          </div>
+          <i class="fa-solid fa-arrow-right launchpad-arrow"></i>
+        </a>
+
+        <a routerLink="/notifications" class="launchpad-card" *ngIf="!authService.isAdmin()">
+          <div class="launchpad-icon icon-notif">
+            <i class="fa-regular fa-bell"></i>
+          </div>
+          <div class="launchpad-info">
+            <h4>Notifications</h4>
+            <p>Recent activity alerts</p>
+          </div>
+          <i class="fa-solid fa-arrow-right launchpad-arrow"></i>
+        </a>
       </div>
 
       <!-- Loading State -->
@@ -89,14 +150,49 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
 
       <!-- Main Dashboard Content Split -->
       <div class="dashboard-split" *ngIf="summary() as data">
-        <!-- Left: Recent Tasks Table -->
+        <!-- Left: Recent Tasks Table with Interactive Tabs -->
         <div class="card recent-tasks-card">
-          <div class="card-header">
+          <div class="card-header flex-header">
             <div class="header-title-box">
               <i class="fa-solid fa-clock-rotate-left text-primary"></i>
               <h3>Recent Tasks</h3>
             </div>
-            <a routerLink="/tasks" class="btn btn-secondary btn-sm">View Board</a>
+            
+            <!-- Filter Tabs -->
+            <div class="task-tabs-strip">
+              <button 
+                type="button" 
+                class="tab-pill" 
+                [class.active]="recentFilter() === 'all'"
+                (click)="recentFilter.set('all')"
+              >
+                All ({{ data.recentTasks.length }})
+              </button>
+              <button 
+                type="button" 
+                class="tab-pill" 
+                [class.active]="recentFilter() === 'ToDo'"
+                (click)="recentFilter.set('ToDo')"
+              >
+                To Do ({{ getRecentCount('ToDo') }})
+              </button>
+              <button 
+                type="button" 
+                class="tab-pill" 
+                [class.active]="recentFilter() === 'InProgress'"
+                (click)="recentFilter.set('InProgress')"
+              >
+                In Progress ({{ getRecentCount('InProgress') }})
+              </button>
+              <button 
+                type="button" 
+                class="tab-pill" 
+                [class.active]="recentFilter() === 'Done'"
+                (click)="recentFilter.set('Done')"
+              >
+                Done ({{ getRecentCount('Done') }})
+              </button>
+            </div>
           </div>
           <div class="card-body" style="padding: 0;">
             <div class="table-responsive">
@@ -111,7 +207,7 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let t of data.recentTasks">
+                  <tr *ngFor="let t of getFilteredRecentTasks()">
                     <td>
                       <div class="task-title-cell">
                         <strong>{{ t.title }}</strong>
@@ -137,8 +233,13 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
                       </span>
                     </td>
                   </tr>
-                  <tr *ngIf="data.recentTasks.length === 0">
-                    <td colspan="5" class="empty-state-cell">No tasks recorded yet.</td>
+                  <tr *ngIf="getFilteredRecentTasks().length === 0">
+                    <td colspan="5" class="empty-state-cell">
+                      <div class="empty-filter-wrap">
+                        <i class="fa-regular fa-clipboard"></i>
+                        <span>No tasks match the selected filter.</span>
+                      </div>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -222,6 +323,13 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
       box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.4);
     }
 
+    .welcome-badge-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
     .role-pill-badge {
       display: inline-block;
       padding: 0.25rem 0.75rem;
@@ -229,9 +337,160 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
       border-radius: var(--radius-full);
       font-size: 0.75rem;
       font-weight: 700;
-      margin-bottom: 0.5rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
+    }
+
+    .greeting-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: rgba(253, 230, 138, 0.2);
+      color: #fef08a;
+      padding: 0.2rem 0.65rem;
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    /* Quick Launchpad */
+    .quick-launchpad {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+
+    .launchpad-card {
+      background: #ffffff;
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .launchpad-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary-400);
+    }
+
+    .launchpad-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .icon-tasks {
+      background: #eef2ff;
+      color: #4f46e5;
+    }
+
+    .icon-calendar {
+      background: #f0fdf4;
+      color: #16a34a;
+    }
+
+    .icon-teams {
+      background: #fdf4ff;
+      color: #c026d3;
+    }
+
+    .icon-admin-tool {
+      background: #f5f3ff;
+      color: #7c3aed;
+    }
+
+    .icon-notif {
+      background: #fffbeb;
+      color: #d97706;
+    }
+
+    .launchpad-info h4 {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--slate-900);
+      margin: 0 0 0.125rem 0;
+    }
+
+    .launchpad-info p {
+      font-size: 0.75rem;
+      color: var(--slate-500);
+      margin: 0;
+    }
+
+    .launchpad-arrow {
+      margin-left: auto;
+      color: var(--slate-300);
+      font-size: 0.875rem;
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    .launchpad-card:hover .launchpad-arrow {
+      color: var(--primary-600);
+      transform: translateX(3px);
+    }
+
+    /* Flex Header & Tabs */
+    .flex-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .task-tabs-strip {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      background: var(--slate-100);
+      padding: 0.25rem;
+      border-radius: var(--radius-md);
+    }
+
+    .tab-pill {
+      background: none;
+      border: none;
+      padding: 0.35rem 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--slate-600);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab-pill:hover {
+      color: var(--slate-900);
+    }
+
+    .tab-pill.active {
+      background: #ffffff;
+      color: var(--primary-700);
+      font-weight: 700;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .empty-filter-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      color: var(--slate-400);
+      padding: 1.5rem 0;
+      font-size: 0.875rem;
     }
 
     .welcome-content h2 {
@@ -471,6 +730,7 @@ export class DashboardComponent implements OnInit {
 
   summary = signal<DashboardSummary | null>(null);
   loading = signal(true);
+  recentFilter = signal<'all' | 'ToDo' | 'InProgress' | 'Done'>('all');
 
   ngOnInit() {
     this.loadStats();
@@ -487,6 +747,25 @@ export class DashboardComponent implements OnInit {
         this.loading.set(false);
       }
     });
+  }
+
+  getTimeGreeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+
+  getRecentCount(status: string): number {
+    const list = this.summary()?.recentTasks || [];
+    return list.filter(t => t.status.toLowerCase() === status.toLowerCase()).length;
+  }
+
+  getFilteredRecentTasks() {
+    const list = this.summary()?.recentTasks || [];
+    const filter = this.recentFilter();
+    if (filter === 'all') return list;
+    return list.filter(t => t.status.toLowerCase() === filter.toLowerCase());
   }
 
   isOverdue(dueDate?: string, status?: string): boolean {

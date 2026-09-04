@@ -62,8 +62,47 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
         </div>
       </div>
 
-      <!-- Filter Bar -->
+      <!-- Filter Bar with Quick Chips -->
       <div class="card filter-bar-card">
+        <!-- Quick Preset Filter Chips -->
+        <div class="quick-preset-chips">
+          <button 
+            type="button" 
+            class="preset-chip" 
+            [class.active]="quickChip() === 'all'" 
+            (click)="applyQuickChip('all')"
+          >
+            <i class="fa-solid fa-layer-group"></i> All Tasks ({{ tasks().length }})
+          </button>
+
+          <button 
+            type="button" 
+            class="preset-chip" 
+            [class.active]="quickChip() === 'my'" 
+            (click)="applyQuickChip('my')"
+          >
+            <i class="fa-solid fa-user-check"></i> Assigned to Me
+          </button>
+
+          <button 
+            type="button" 
+            class="preset-chip chip-urgent" 
+            [class.active]="quickChip() === 'urgent'" 
+            (click)="applyQuickChip('urgent')"
+          >
+            <i class="fa-solid fa-fire"></i> High / Urgent Priority
+          </button>
+
+          <button 
+            type="button" 
+            class="preset-chip chip-overdue" 
+            [class.active]="quickChip() === 'overdue'" 
+            (click)="applyQuickChip('overdue')"
+          >
+            <i class="fa-solid fa-triangle-exclamation"></i> Overdue Tasks
+          </button>
+        </div>
+
         <div class="filter-grid">
           <!-- Search input -->
           <div class="filter-col search-col">
@@ -74,7 +113,7 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
                 class="form-control" 
                 [(ngModel)]="search" 
                 (ngModelChange)="applyFilters()" 
-                placeholder="Search by title or description..."
+                placeholder="Search by title, description or tag..."
               />
             </div>
           </div>
@@ -108,17 +147,9 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
             </select>
           </div>
 
-          <!-- Overdue Only Toggle -->
-          <div class="filter-col-check">
-            <label class="check-label">
-              <input type="checkbox" [(ngModel)]="isOverdueOnly" (ngModelChange)="applyFilters()">
-              <span>Overdue Only</span>
-            </label>
-          </div>
-
           <!-- Reset Filter -->
           <div class="filter-col-reset">
-            <button class="btn btn-secondary btn-sm" (click)="resetFilters()" title="Reset Filters">
+            <button class="btn btn-secondary btn-sm" (click)="resetFilters()" title="Reset All Filters">
               <i class="fa-solid fa-arrow-rotate-left"></i> Reset
             </button>
           </div>
@@ -139,8 +170,11 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
             <div class="col-title-wrap">
               <span class="col-dot dot-todo"></span>
               <h4>To Do</h4>
+              <span class="col-count">{{ getTasksByStatus('ToDo').length }}</span>
             </div>
-            <span class="col-count">{{ getTasksByStatus('ToDo').length }}</span>
+            <button *ngIf="authService.isManager()" class="col-add-btn" (click)="openCreateModal()" title="Add Task">
+              <i class="fa-solid fa-plus"></i> New
+            </button>
           </div>
 
           <div class="kanban-cards-wrapper">
@@ -150,23 +184,34 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
               (click)="openDetailModal(t)"
             >
               <div class="card-top">
-                <span class="badge" [ngClass]="'badge-' + (t.priority | lowercase)">{{ t.priority }}</span>
+                <span class="badge" [ngClass]="'badge-' + (t.priority | lowercase)">
+                  <i *ngIf="t.priority === 'Urgent'" class="fa-solid fa-fire"></i>
+                  <i *ngIf="t.priority === 'High'" class="fa-solid fa-bolt"></i>
+                  {{ t.priority }}
+                </span>
                 <span *ngIf="t.teamName" class="card-team-pill">{{ t.teamName }}</span>
               </div>
               <h4 class="card-task-title">{{ t.title }}</h4>
               <p class="card-desc">{{ t.description }}</p>
+
+              <div class="card-date-row" *ngIf="t.dueDate">
+                <span class="due-badge" [class.due-alert]="isOverdue(t.dueDate, t.status)">
+                  <i class="fa-regular fa-clock"></i> {{ t.dueDate | date:'mediumDate' }}
+                </span>
+              </div>
+
               <div class="card-bottom">
                 <div class="card-assignee">
                   <div class="avatar-tiny">{{ (t.assignedToUserName || '?').charAt(0) }}</div>
                   <span>{{ t.assignedToUserName || 'Unassigned' }}</span>
                 </div>
                 <div class="card-meta-right">
-                  <span *ngIf="t.commentsCount > 0" class="comment-count-tag">
+                  <span *ngIf="t.commentsCount > 0" class="comment-count-tag" title="Comments">
                     <i class="fa-regular fa-comment"></i> {{ t.commentsCount }}
                   </span>
                   <div class="status-shift-btns" (click)="$event.stopPropagation()">
-                    <button class="shift-btn" title="Move to In Progress" (click)="moveStatus(t, 2)">
-                      <i class="fa-solid fa-arrow-right"></i>
+                    <button class="shift-btn shift-start" title="Start task (Move to In Progress)" (click)="moveStatus(t, 2)">
+                      <span>Start</span> <i class="fa-solid fa-arrow-right"></i>
                     </button>
                   </div>
                 </div>
@@ -174,7 +219,8 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
             </div>
 
             <div *ngIf="getTasksByStatus('ToDo').length === 0" class="empty-col">
-              No tasks in To Do
+              <i class="fa-regular fa-circle-check"></i>
+              <p>No tasks in To Do</p>
             </div>
           </div>
         </div>
@@ -185,37 +231,51 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
             <div class="col-title-wrap">
               <span class="col-dot dot-inprogress"></span>
               <h4>In Progress</h4>
+              <span class="col-count">{{ getTasksByStatus('InProgress').length }}</span>
             </div>
-            <span class="col-count">{{ getTasksByStatus('InProgress').length }}</span>
+            <button *ngIf="authService.isManager()" class="col-add-btn" (click)="openCreateModal()" title="Add Task">
+              <i class="fa-solid fa-plus"></i> New
+            </button>
           </div>
 
           <div class="kanban-cards-wrapper">
             <div 
               *ngFor="let t of getTasksByStatus('InProgress')" 
-              class="kanban-card" 
+              class="kanban-card card-inprogress" 
               (click)="openDetailModal(t)"
             >
               <div class="card-top">
-                <span class="badge" [ngClass]="'badge-' + (t.priority | lowercase)">{{ t.priority }}</span>
+                <span class="badge" [ngClass]="'badge-' + (t.priority | lowercase)">
+                  <i *ngIf="t.priority === 'Urgent'" class="fa-solid fa-fire"></i>
+                  <i *ngIf="t.priority === 'High'" class="fa-solid fa-bolt"></i>
+                  {{ t.priority }}
+                </span>
                 <span *ngIf="t.teamName" class="card-team-pill">{{ t.teamName }}</span>
               </div>
               <h4 class="card-task-title">{{ t.title }}</h4>
               <p class="card-desc">{{ t.description }}</p>
+
+              <div class="card-date-row" *ngIf="t.dueDate">
+                <span class="due-badge" [class.due-alert]="isOverdue(t.dueDate, t.status)">
+                  <i class="fa-regular fa-clock"></i> {{ t.dueDate | date:'mediumDate' }}
+                </span>
+              </div>
+
               <div class="card-bottom">
                 <div class="card-assignee">
                   <div class="avatar-tiny">{{ (t.assignedToUserName || '?').charAt(0) }}</div>
                   <span>{{ t.assignedToUserName || 'Unassigned' }}</span>
                 </div>
                 <div class="card-meta-right">
-                  <span *ngIf="t.commentsCount > 0" class="comment-count-tag">
+                  <span *ngIf="t.commentsCount > 0" class="comment-count-tag" title="Comments">
                     <i class="fa-regular fa-comment"></i> {{ t.commentsCount }}
                   </span>
                   <div class="status-shift-btns" (click)="$event.stopPropagation()">
-                    <button class="shift-btn" title="Move to To Do" (click)="moveStatus(t, 1)">
+                    <button class="shift-btn shift-back" title="Move back to To Do" (click)="moveStatus(t, 1)">
                       <i class="fa-solid fa-arrow-left"></i>
                     </button>
-                    <button class="shift-btn" title="Move to Done" (click)="moveStatus(t, 3)">
-                      <i class="fa-solid fa-arrow-right"></i>
+                    <button class="shift-btn shift-done" title="Mark as Done" (click)="moveStatus(t, 3)">
+                      <span>Done</span> <i class="fa-solid fa-check"></i>
                     </button>
                   </div>
                 </div>
@@ -223,7 +283,8 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
             </div>
 
             <div *ngIf="getTasksByStatus('InProgress').length === 0" class="empty-col">
-              No tasks In Progress
+              <i class="fa-solid fa-hourglass-empty"></i>
+              <p>No tasks In Progress</p>
             </div>
           </div>
         </div>
@@ -234,8 +295,8 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
             <div class="col-title-wrap">
               <span class="col-dot dot-done"></span>
               <h4>Completed</h4>
+              <span class="col-count">{{ getTasksByStatus('Done').length }}</span>
             </div>
-            <span class="col-count">{{ getTasksByStatus('Done').length }}</span>
           </div>
 
           <div class="kanban-cards-wrapper">
@@ -245,11 +306,12 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
               (click)="openDetailModal(t)"
             >
               <div class="card-top">
-                <span class="badge badge-done">Done</span>
+                <span class="badge badge-done"><i class="fa-solid fa-check"></i> Done</span>
                 <span *ngIf="t.teamName" class="card-team-pill">{{ t.teamName }}</span>
               </div>
               <h4 class="card-task-title task-strike">{{ t.title }}</h4>
               <p class="card-desc">{{ t.description }}</p>
+
               <div class="card-bottom">
                 <div class="card-assignee">
                   <div class="avatar-tiny">{{ (t.assignedToUserName || '?').charAt(0) }}</div>
@@ -257,8 +319,8 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
                 </div>
                 <div class="card-meta-right">
                   <div class="status-shift-btns" (click)="$event.stopPropagation()">
-                    <button class="shift-btn" title="Move back to In Progress" (click)="moveStatus(t, 2)">
-                      <i class="fa-solid fa-arrow-left"></i>
+                    <button class="shift-btn shift-reopen" title="Reopen task (Move to In Progress)" (click)="moveStatus(t, 2)">
+                      <i class="fa-solid fa-rotate-left"></i> Reopen
                     </button>
                   </div>
                 </div>
@@ -266,7 +328,8 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
             </div>
 
             <div *ngIf="getTasksByStatus('Done').length === 0" class="empty-col">
-              No completed tasks
+              <i class="fa-regular fa-square-check"></i>
+              <p>No completed tasks yet</p>
             </div>
           </div>
         </div>
@@ -440,9 +503,58 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
       padding: 1rem 1.25rem;
     }
 
+    .quick-preset-chips {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.875rem;
+      padding-bottom: 0.875rem;
+      border-bottom: 1px solid var(--slate-100);
+    }
+
+    .preset-chip {
+      background: var(--slate-100);
+      border: 1px solid var(--slate-200);
+      color: var(--slate-700);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.35rem 0.75rem;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      transition: all 0.15s ease;
+    }
+
+    .preset-chip:hover {
+      background: var(--slate-200);
+      border-color: var(--slate-300);
+    }
+
+    .preset-chip.active {
+      background: var(--primary-600);
+      color: #ffffff;
+      border-color: var(--primary-600);
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+    }
+
+    .preset-chip.chip-urgent.active {
+      background: #dc2626;
+      border-color: #dc2626;
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+    }
+
+    .preset-chip.chip-overdue.active {
+      background: #b45309;
+      border-color: #b45309;
+      box-shadow: 0 2px 8px rgba(180, 83, 9, 0.35);
+    }
+
     .filter-grid {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr auto auto;
+      grid-template-columns: 2fr 1fr 1fr 1fr auto;
       gap: 0.75rem;
       align-items: center;
     }
@@ -645,30 +757,116 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
       font-weight: 600;
     }
 
-    .status-shift-btns {
-      display: flex;
-      gap: 0.25rem;
-    }
-
-    .shift-btn {
-      width: 24px;
-      height: 24px;
-      border-radius: var(--radius-sm);
+    .col-add-btn {
+      background: #ffffff;
       border: 1px solid var(--slate-300);
-      background: var(--slate-50);
-      color: var(--slate-700);
+      border-radius: var(--radius-sm);
       font-size: 0.6875rem;
-      display: flex;
+      font-weight: 700;
+      color: var(--primary-600);
+      padding: 0.2rem 0.5rem;
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
+      gap: 0.25rem;
       cursor: pointer;
       transition: all 0.15s;
     }
 
-    .shift-btn:hover {
-      background: var(--primary-600);
+    .col-add-btn:hover {
+      background: var(--primary-50);
+      border-color: var(--primary-400);
+    }
+
+    .card-date-row {
+      margin-top: 0.125rem;
+    }
+
+    .due-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.6875rem;
+      color: var(--slate-500);
+      background: var(--slate-100);
+      padding: 0.15rem 0.45rem;
+      border-radius: var(--radius-sm);
+    }
+
+    .due-badge.due-alert {
+      background: #fef2f2;
+      color: #dc2626;
+      font-weight: 700;
+      border: 1px solid #fecaca;
+    }
+
+    .status-shift-btns {
+      display: flex;
+      gap: 0.35rem;
+      align-items: center;
+    }
+
+    .shift-btn {
+      height: 26px;
+      padding: 0 0.55rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.6875rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .shift-start {
+      background: #eff6ff;
+      color: #2563eb;
+      border: 1px solid #bfdbfe;
+    }
+
+    .shift-start:hover {
+      background: #2563eb;
       color: #ffffff;
-      border-color: var(--primary-600);
+      border-color: #2563eb;
+    }
+
+    .shift-back {
+      background: var(--slate-100);
+      color: var(--slate-600);
+      border: 1px solid var(--slate-300);
+      width: 26px;
+      padding: 0;
+      justify-content: center;
+    }
+
+    .shift-back:hover {
+      background: var(--slate-700);
+      color: #ffffff;
+      border-color: var(--slate-700);
+    }
+
+    .shift-done {
+      background: #ecfdf5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+    }
+
+    .shift-done:hover {
+      background: #059669;
+      color: #ffffff;
+      border-color: #059669;
+    }
+
+    .shift-reopen {
+      background: #fffbeb;
+      color: #d97706;
+      border: 1px solid #fde68a;
+    }
+
+    .shift-reopen:hover {
+      background: #d97706;
+      color: #ffffff;
+      border-color: #d97706;
     }
 
     .empty-col {
@@ -678,6 +876,15 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
       font-size: 0.8125rem;
       border: 2px dashed var(--slate-200);
       border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .empty-col i {
+      font-size: 1.5rem;
+      color: var(--slate-300);
     }
 
     .table-task-cell {
@@ -716,6 +923,8 @@ export class TaskListComponent implements OnInit {
   teamFilter: number | null = null;
   isOverdueOnly = false;
 
+  quickChip = signal<'all' | 'my' | 'urgent' | 'overdue'>('all');
+
   // Modals state
   showTaskModal = signal(false);
   selectedTaskForEdit = signal<TaskItem | null>(null);
@@ -753,13 +962,50 @@ export class TaskListComponent implements OnInit {
     this.loadTasks();
   }
 
+  applyQuickChip(chip: 'all' | 'my' | 'urgent' | 'overdue') {
+    this.quickChip.set(chip);
+    if (chip === 'all') {
+      this.resetFilters();
+      return;
+    }
+    if (chip === 'my') {
+      const currentUserId = this.authService.currentUser()?.id;
+      this.loading.set(true);
+      this.taskService.getTasks().subscribe({
+        next: (res) => {
+          this.tasks.set(res.filter(t => t.assignedToUserId === currentUserId));
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false)
+      });
+      return;
+    }
+    if (chip === 'urgent') {
+      this.priorityFilter = 4;
+      this.isOverdueOnly = false;
+      this.loadTasks();
+      return;
+    }
+    if (chip === 'overdue') {
+      this.isOverdueOnly = true;
+      this.loadTasks();
+      return;
+    }
+  }
+
   resetFilters() {
+    this.quickChip.set('all');
     this.search = '';
     this.statusFilter = null;
     this.priorityFilter = null;
     this.teamFilter = null;
     this.isOverdueOnly = false;
     this.loadTasks();
+  }
+
+  isOverdue(dueDate?: string, status?: string): boolean {
+    if (!dueDate || status === 'Done') return false;
+    return new Date(dueDate) < new Date();
   }
 
   getTasksByStatus(status: 'ToDo' | 'InProgress' | 'Done'): TaskItem[] {
