@@ -23,7 +23,7 @@ namespace ManagementSystem.Helpers
         public (string Token, DateTime Expiration) GenerateToken(User user)
         {
             var jwtSettings = _configuration.GetSection("Jwt");
-            var secretKey = jwtSettings["Key"] ?? "DefaultSuperSecretKeyForManagementSystem2025!@#$%^&*";
+            var secretKey = jwtSettings["Key"] ?? "ManagementSystemSuperSecretSecureSigningKey2025!@#$%^&*";
             var issuer = jwtSettings["Issuer"] ?? "ManagementSystemAPI";
             var audience = jwtSettings["Audience"] ?? "ManagementSystemClient";
             var expiryMinutes = int.TryParse(jwtSettings["ExpiryMinutes"], out var mins) ? mins : 1440;
