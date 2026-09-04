@@ -1057,9 +1057,4 @@ export class TaskListComponent implements OnInit {
       });
     }
   }
-
-  isOverdue(dueDate?: string, status?: string): boolean {
-    if (!dueDate || status === 'Done') return false;
-    return new Date(dueDate) < new Date();
-  }
 }
