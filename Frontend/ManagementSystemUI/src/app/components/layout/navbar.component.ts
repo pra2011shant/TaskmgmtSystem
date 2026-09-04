@@ -17,6 +17,9 @@ import { ToastService } from '../../core/services/toast.service';
         </button>
         <div class="page-title-wrap">
           <div class="title-row">
+            <div class="system-nav-icon">
+              <span>⚡</span>
+            </div>
             <h1 class="page-header-title">WorkFlow Pro</h1>
             <span class="active-badge"><i class="fa-solid fa-circle"></i> Live System</span>
           </div>
@@ -361,6 +364,19 @@ import { ToastService } from '../../core/services/toast.service';
       font-size: 0.75rem;
       font-weight: 600;
       color: var(--primary-600);
+    }
+
+    .system-nav-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #6366f1, #4338ca);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+      font-size: 1rem;
+      flex-shrink: 0;
     }
 
     .title-row {
