@@ -69,7 +69,7 @@ import { EmptyStateComponent } from '../../components/ui/empty-state.component';
               *ngIf="notificationService.notifications().length === 0"
               icon="fa-regular fa-bell-slash"
               title="No Notifications Found"
-              description="You're all caught up! New alerts and task activity will appear here."
+              description="You're all caught up! New updates, task assignments, and discussions will appear here in real time."
             ></app-empty-state>
           </div>
         </div>

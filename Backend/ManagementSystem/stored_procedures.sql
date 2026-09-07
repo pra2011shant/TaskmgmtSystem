@@ -169,12 +169,12 @@ GO
 -- ----------------------------------------------------------------------------------------------
 CREATE OR ALTER PROCEDURE sp_CreateTask
     @Title NVARCHAR(200),
-    @Description NVARCHAR(2000) = NULL,
-    @Status INT = 1,
-    @Priority INT = 2,
-    @DueDate DATETIME2 = NULL,
-    @TeamId INT = NULL,
-    @AssignedToUserId INT = NULL,
+    @Description NVARCHAR(2000),
+    @Status INT,
+    @Priority INT,
+    @DueDate DATETIME2,
+    @TeamId INT,
+    @AssignedToUserId INT,
     @CreatedById INT,
     @Remarks NVARCHAR(500) = NULL
 AS
@@ -197,7 +197,7 @@ BEGIN
         )
         VALUES (
             LTRIM(RTRIM(@Title)),
-            COALESCE(@Description, ''),
+            @Description,
             @Status,
             @Priority,
             @DueDate,
@@ -227,12 +227,12 @@ GO
 CREATE OR ALTER PROCEDURE sp_UpdateTask
     @TaskId INT,
     @Title NVARCHAR(200),
-    @Description NVARCHAR(2000) = NULL,
+    @Description NVARCHAR(2000),
     @Status INT,
     @Priority INT,
-    @DueDate DATETIME2 = NULL,
-    @TeamId INT = NULL,
-    @AssignedToUserId INT = NULL,
+    @DueDate DATETIME2,
+    @TeamId INT,
+    @AssignedToUserId INT,
     @Remarks NVARCHAR(500) = NULL
 AS
 BEGIN
@@ -240,7 +240,7 @@ BEGIN
 
     UPDATE Tasks
     SET Title = LTRIM(RTRIM(@Title)),
-        Description = COALESCE(@Description, Description),
+        Description = @Description,
         Status = @Status,
         Priority = @Priority,
         DueDate = @DueDate,
@@ -354,6 +354,45 @@ BEGIN
 END
 GO
 
+-- ----------------------------------------------------------------------------------------------
+-- SP: sp_GetTaskById
+-- Purpose: Retrieves complete task specifications, assignee metadata, and audit fields by Task ID.
+-- ----------------------------------------------------------------------------------------------
+CREATE OR ALTER PROCEDURE sp_GetTaskById
+    @TaskId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        t.Id,
+        t.Title,
+        t.Description,
+        t.Status,
+        t.Priority,
+        t.DueDate,
+        t.TeamId,
+        tm.Name AS TeamName,
+        t.AssignedToUserId,
+        u_assignee.FullName AS AssignedToUserName,
+        u_assignee.Email AS AssignedToUserEmail,
+        t.CreatedById AS CreatedByUserId,
+        u_creator.FullName AS CreatedByUserName,
+        t.Remarks,
+        t.Status AS RecordStatus,
+        t.IsDeleted,
+        t.CreatedDate AS CreatedAt,
+        t.LastUpdatedDate AS UpdatedAt,
+        (SELECT COUNT(1) FROM Comments c WHERE c.TaskId = t.Id AND c.IsDeleted = 0) AS CommentsCount
+    FROM Tasks t
+    LEFT JOIN Teams tm ON t.TeamId = tm.Id AND tm.IsDeleted = 0
+    LEFT JOIN Users u_assignee ON t.AssignedToUserId = u_assignee.Id AND u_assignee.IsDeleted = 0
+    INNER JOIN Users u_creator ON t.CreatedById = u_creator.Id
+    WHERE t.Id = @TaskId 
+      AND t.IsDeleted = 0;
+END
+GO
+
 
 -- ==============================================================================================
 -- 3. TEAM & MEMBER MANAGEMENT PROCEDURES
@@ -365,8 +404,8 @@ GO
 -- ----------------------------------------------------------------------------------------------
 CREATE OR ALTER PROCEDURE sp_CreateTeam
     @Name NVARCHAR(150),
-    @Description NVARCHAR(500) = NULL,
-    @ManagerId INT = NULL,
+    @Description NVARCHAR(500),
+    @ManagerId INT,
     @Remarks NVARCHAR(500) = NULL,
     @CreatedById INT = NULL
 AS
@@ -377,7 +416,7 @@ BEGIN
         BEGIN TRANSACTION;
 
         INSERT INTO Teams (Name, Description, ManagerId, Remarks, Status, IsDeleted, CreatedDate, CreatedById)
-        VALUES (LTRIM(RTRIM(@Name)), COALESCE(@Description, ''), @ManagerId, @Remarks, 1, 0, SYSUTCDATETIME(), @CreatedById);
+        VALUES (LTRIM(RTRIM(@Name)), @Description, @ManagerId, @Remarks, 1, 0, SYSUTCDATETIME(), @CreatedById);
 
         DECLARE @NewTeamId INT = SCOPE_IDENTITY();
 
@@ -391,47 +430,6 @@ BEGIN
         COMMIT TRANSACTION;
 
         SELECT @NewTeamId AS NewTeamId;
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0
-            ROLLBACK TRANSACTION;
-
-        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
-        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
-        DECLARE @ErrorState INT = ERROR_STATE();
-        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
-    END CATCH
-END
-GO
-
--- ----------------------------------------------------------------------------------------------
--- SP: sp_DeleteTeam
--- Purpose: Soft deletes a team and all its task / membership references.
--- ----------------------------------------------------------------------------------------------
-CREATE OR ALTER PROCEDURE sp_DeleteTeam
-    @TeamId INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    BEGIN TRY
-        BEGIN TRANSACTION;
-
-        -- Soft delete team
-        UPDATE Teams
-        SET IsDeleted = 1,
-            LastUpdatedDate = SYSUTCDATETIME()
-        WHERE Id = @TeamId;
-
-        -- Soft delete memberships
-        UPDATE TeamMembers
-        SET IsDeleted = 1,
-            LastUpdatedDate = SYSUTCDATETIME()
-        WHERE TeamId = @TeamId;
-
-        COMMIT TRANSACTION;
-
-        SELECT @@ROWCOUNT AS RowsAffected;
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0
@@ -522,6 +520,90 @@ BEGIN
       AND UserId = @UserId;
 
     SELECT @@ROWCOUNT AS RowsAffected;
+END
+GO
+
+-- ----------------------------------------------------------------------------------------------
+-- SP: sp_UpdateTeam
+-- Purpose: Updates an existing team's name, description, and assigned manager.
+-- ----------------------------------------------------------------------------------------------
+CREATE OR ALTER PROCEDURE sp_UpdateTeam
+    @TeamId INT,
+    @Name NVARCHAR(150),
+    @Description NVARCHAR(500) = NULL,
+    @ManagerId INT = NULL,
+    @Remarks NVARCHAR(500) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE Teams
+    SET Name = LTRIM(RTRIM(@Name)),
+        Description = @Description,
+        ManagerId = @ManagerId,
+        Remarks = COALESCE(@Remarks, Remarks),
+        LastUpdatedDate = SYSUTCDATETIME()
+    WHERE Id = @TeamId 
+      AND IsDeleted = 0;
+
+    -- Ensure manager is present in team membership
+    IF @ManagerId IS NOT NULL
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM TeamMembers WHERE TeamId = @TeamId AND UserId = @ManagerId)
+        BEGIN
+            INSERT INTO TeamMembers (TeamId, UserId, Status, IsDeleted, CreatedDate)
+            VALUES (@TeamId, @ManagerId, 1, 0, SYSUTCDATETIME());
+        END
+        ELSE
+        BEGIN
+            UPDATE TeamMembers
+            SET IsDeleted = 0,
+                Status = 1,
+                LastUpdatedDate = SYSUTCDATETIME()
+            WHERE TeamId = @TeamId AND UserId = @ManagerId;
+        END
+    END
+
+    SELECT @@ROWCOUNT AS RowsAffected;
+END
+GO
+
+-- ----------------------------------------------------------------------------------------------
+-- SP: sp_DeleteTeam
+-- Purpose: Logically soft-deletes a team and disassociates its active member memberships.
+-- ----------------------------------------------------------------------------------------------
+CREATE OR ALTER PROCEDURE sp_DeleteTeam
+    @TeamId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        UPDATE Teams
+        SET IsDeleted = 1,
+            LastUpdatedDate = SYSUTCDATETIME()
+        WHERE Id = @TeamId;
+
+        UPDATE TeamMembers
+        SET IsDeleted = 1,
+            LastUpdatedDate = SYSUTCDATETIME()
+        WHERE TeamId = @TeamId;
+
+        COMMIT TRANSACTION;
+
+        SELECT 1 AS Success;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+    END CATCH
 END
 GO
 
@@ -669,6 +751,27 @@ BEGIN
     WHERE UserId = @UserId
       AND (@NotificationId IS NULL OR Id = @NotificationId)
       AND IsRead = 0;
+
+    SELECT @@ROWCOUNT AS RowsAffected;
+END
+GO
+
+-- ----------------------------------------------------------------------------------------------
+-- SP: sp_MarkAllNotificationsAsRead
+-- Purpose: Bulk-marks all unread notifications as read for a designated user.
+-- ----------------------------------------------------------------------------------------------
+CREATE OR ALTER PROCEDURE sp_MarkAllNotificationsAsRead
+    @UserId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE Notifications
+    SET IsRead = 1,
+        LastUpdatedDate = SYSUTCDATETIME()
+    WHERE UserId = @UserId 
+      AND IsRead = 0 
+      AND IsDeleted = 0;
 
     SELECT @@ROWCOUNT AS RowsAffected;
 END

@@ -8,6 +8,8 @@ import { TeamService } from '../../core/services/team.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { TaskDetailModalComponent } from '../tasks/task-detail-modal.component';
+import { StatusBadgeComponent } from '../../components/ui/status-badge.component';
+import { SkeletonLoaderComponent } from '../../components/ui/skeleton-loader.component';
 
 interface DayAssigneeSummary {
   userId: number;
@@ -29,7 +31,7 @@ interface CalendarDay {
 @Component({
   selector: 'app-task-schedule',
   standalone: true,
-  imports: [CommonModule, FormsModule, TaskDetailModalComponent],
+  imports: [CommonModule, FormsModule, TaskDetailModalComponent, StatusBadgeComponent, SkeletonLoaderComponent],
   template: `
     <div class="schedule-page">
       <!-- Role-Based Calendar Scope Banner -->
@@ -218,10 +220,7 @@ interface CalendarDay {
       </div>
 
       <!-- Loading State -->
-      <div *ngIf="loading()" class="loading-state">
-        <i class="fa-solid fa-circle-notch fa-spin"></i>
-        <span>Loading scheduled deliverables...</span>
-      </div>
+      <app-skeleton-loader *ngIf="loading()" type="cards" [count]="3"></app-skeleton-loader>
 
       <!-- Tasks Grid for Selected Date -->
       <div *ngIf="!loading()" class="tasks-section">
@@ -234,8 +233,8 @@ interface CalendarDay {
           >
             <div class="card-top-row">
               <div class="status-tags">
-                <span class="badge" [ngClass]="'badge-' + (task.status | lowercase)">{{ task.status }}</span>
-                <span class="badge" [ngClass]="'badge-' + (task.priority | lowercase)">{{ task.priority }}</span>
+                <app-status-badge type="status" [value]="task.status" [size]="'sm'"></app-status-badge>
+                <app-status-badge type="priority" [value]="task.priority" [size]="'sm'"></app-status-badge>
               </div>
               <span *ngIf="task.teamName" class="team-badge">
                 <i class="fa-solid fa-users"></i> {{ task.teamName }}
