@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { NotificationService } from '../../core/services/notification.service';
 import { ToastService } from '../../core/services/toast.service';
+import { EmptyStateComponent } from '../../components/ui/empty-state.component';
 
 @Component({
   selector: 'app-notifications-page',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, EmptyStateComponent],
   template: `
     <div class="notifications-page">
       <div class="page-header">
@@ -64,11 +65,12 @@ import { ToastService } from '../../core/services/toast.service';
               </div>
             </div>
 
-            <div *ngIf="notificationService.notifications().length === 0" class="empty-notifs">
-              <i class="fa-regular fa-bell-slash"></i>
-              <h3>No Notifications Found</h3>
-              <p>You're all caught up! New updates will appear here in real time.</p>
-            </div>
+            <app-empty-state
+              *ngIf="notificationService.notifications().length === 0"
+              icon="fa-regular fa-bell-slash"
+              title="No Notifications Found"
+              description="You're all caught up! New alerts and task activity will appear here."
+            ></app-empty-state>
           </div>
         </div>
       </div>

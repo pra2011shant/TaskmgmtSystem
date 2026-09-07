@@ -169,12 +169,12 @@ GO
 -- ----------------------------------------------------------------------------------------------
 CREATE OR ALTER PROCEDURE sp_CreateTask
     @Title NVARCHAR(200),
-    @Description NVARCHAR(2000),
-    @Status INT,
-    @Priority INT,
-    @DueDate DATETIME2,
-    @TeamId INT,
-    @AssignedToUserId INT,
+    @Description NVARCHAR(2000) = NULL,
+    @Status INT = 1,
+    @Priority INT = 2,
+    @DueDate DATETIME2 = NULL,
+    @TeamId INT = NULL,
+    @AssignedToUserId INT = NULL,
     @CreatedById INT,
     @Remarks NVARCHAR(500) = NULL
 AS
@@ -197,7 +197,7 @@ BEGIN
         )
         VALUES (
             LTRIM(RTRIM(@Title)),
-            @Description,
+            COALESCE(@Description, ''),
             @Status,
             @Priority,
             @DueDate,
@@ -227,12 +227,12 @@ GO
 CREATE OR ALTER PROCEDURE sp_UpdateTask
     @TaskId INT,
     @Title NVARCHAR(200),
-    @Description NVARCHAR(2000),
+    @Description NVARCHAR(2000) = NULL,
     @Status INT,
     @Priority INT,
-    @DueDate DATETIME2,
-    @TeamId INT,
-    @AssignedToUserId INT,
+    @DueDate DATETIME2 = NULL,
+    @TeamId INT = NULL,
+    @AssignedToUserId INT = NULL,
     @Remarks NVARCHAR(500) = NULL
 AS
 BEGIN
@@ -240,7 +240,7 @@ BEGIN
 
     UPDATE Tasks
     SET Title = LTRIM(RTRIM(@Title)),
-        Description = @Description,
+        Description = COALESCE(@Description, Description),
         Status = @Status,
         Priority = @Priority,
         DueDate = @DueDate,
@@ -365,8 +365,8 @@ GO
 -- ----------------------------------------------------------------------------------------------
 CREATE OR ALTER PROCEDURE sp_CreateTeam
     @Name NVARCHAR(150),
-    @Description NVARCHAR(500),
-    @ManagerId INT,
+    @Description NVARCHAR(500) = NULL,
+    @ManagerId INT = NULL,
     @Remarks NVARCHAR(500) = NULL,
     @CreatedById INT = NULL
 AS
@@ -377,7 +377,7 @@ BEGIN
         BEGIN TRANSACTION;
 
         INSERT INTO Teams (Name, Description, ManagerId, Remarks, Status, IsDeleted, CreatedDate, CreatedById)
-        VALUES (LTRIM(RTRIM(@Name)), @Description, @ManagerId, @Remarks, 1, 0, SYSUTCDATETIME(), @CreatedById);
+        VALUES (LTRIM(RTRIM(@Name)), COALESCE(@Description, ''), @ManagerId, @Remarks, 1, 0, SYSUTCDATETIME(), @CreatedById);
 
         DECLARE @NewTeamId INT = SCOPE_IDENTITY();
 
@@ -391,6 +391,47 @@ BEGIN
         COMMIT TRANSACTION;
 
         SELECT @NewTeamId AS NewTeamId;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+    END CATCH
+END
+GO
+
+-- ----------------------------------------------------------------------------------------------
+-- SP: sp_DeleteTeam
+-- Purpose: Soft deletes a team and all its task / membership references.
+-- ----------------------------------------------------------------------------------------------
+CREATE OR ALTER PROCEDURE sp_DeleteTeam
+    @TeamId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        -- Soft delete team
+        UPDATE Teams
+        SET IsDeleted = 1,
+            LastUpdatedDate = SYSUTCDATETIME()
+        WHERE Id = @TeamId;
+
+        -- Soft delete memberships
+        UPDATE TeamMembers
+        SET IsDeleted = 1,
+            LastUpdatedDate = SYSUTCDATETIME()
+        WHERE TeamId = @TeamId;
+
+        COMMIT TRANSACTION;
+
+        SELECT @@ROWCOUNT AS RowsAffected;
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0
