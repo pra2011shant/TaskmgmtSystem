@@ -4,34 +4,50 @@ import { RouterModule } from '@angular/router';
 import { TaskService } from '../../core/services/task.service';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardSummary } from '../../core/models/dashboard.model';
+import { StatCardComponent } from '../../components/ui/stat-card.component';
+import { StatusBadgeComponent } from '../../components/ui/status-badge.component';
+import { SkeletonLoaderComponent } from '../../components/ui/skeleton-loader.component';
+import { EmptyStateComponent } from '../../components/ui/empty-state.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [
+    CommonModule, 
+    RouterModule, 
+    StatCardComponent, 
+    StatusBadgeComponent, 
+    SkeletonLoaderComponent, 
+    EmptyStateComponent
+  ],
   template: `
     <div class="dashboard-page">
       <!-- Top Welcome Banner -->
       <div class="welcome-card">
         <div class="welcome-content">
           <div class="welcome-badge-row">
-            <span class="role-pill-badge">{{ authService.userRole() }} Workspace</span>
+            <span class="role-pill-badge">
+              <i class="fa-solid fa-shield-halved" *ngIf="authService.isAdmin()"></i>
+              <i class="fa-solid fa-user-tie" *ngIf="authService.isManager()"></i>
+              <i class="fa-solid fa-user" *ngIf="!authService.isAdmin() && !authService.isManager()"></i>
+              {{ authService.userRole() }} Workspace
+            </span>
             <span class="greeting-pill"><i class="fa-regular fa-sun"></i> {{ getTimeGreeting() }}</span>
           </div>
           <h2>Welcome, {{ authService.currentUser()?.fullName }} 👋</h2>
-          <p>Here is your real-time management control center. Monitor progress, assignments, and workflows.</p>
+          <p>Here is your real-time management control center. Monitor team productivity, workflows, and task execution.</p>
         </div>
         <div class="welcome-actions">
-          <a routerLink="/tasks" class="btn btn-primary">
+          <a routerLink="/tasks" class="btn btn-primary-glass">
             <i class="fa-solid fa-table-columns"></i> Open Kanban
           </a>
-          <a routerLink="/schedule" class="btn btn-secondary">
+          <a routerLink="/schedule" class="btn btn-secondary-glass">
             <i class="fa-regular fa-calendar-days"></i> Timeline Schedule
           </a>
         </div>
       </div>
 
-      <!-- Quick Action Launchpad (User Friendly Shortcuts) -->
+      <!-- Quick Action Launchpad -->
       <div class="quick-launchpad">
         <a routerLink="/tasks" class="launchpad-card">
           <div class="launchpad-icon icon-tasks">
@@ -89,73 +105,72 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
         </a>
       </div>
 
-      <!-- Loading State -->
-      <div *ngIf="loading()" class="loading-state">
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        <span>Loading analytics...</span>
-      </div>
+      <!-- Loading Skeleton State -->
+      <app-skeleton-loader *ngIf="loading()" type="stats" [count]="5"></app-skeleton-loader>
 
-      <!-- Stats Grid -->
-      <div class="stats-grid" *ngIf="summary() as data">
-        <div class="stat-card">
-          <div class="stat-icon icon-indigo">
-            <i class="fa-solid fa-list-ul"></i>
-          </div>
-          <div class="stat-info">
-            <span class="stat-label">Total Tasks</span>
-            <h3 class="stat-value">{{ data.totalTasks }}</h3>
-          </div>
-        </div>
+      <!-- Stats Grid using Reusable StatCard Components -->
+      <div class="stats-grid" *ngIf="!loading() && summary() as data">
+        <app-stat-card
+          label="Total Tasks"
+          [value]="data.totalTasks"
+          icon="fa-solid fa-list-ul"
+          iconClass="icon-indigo"
+          badgeText="Active"
+          badgeClass="badge-primary"
+          [subText]="'Assigned & Tracked'"
+        ></app-stat-card>
 
-        <div class="stat-card">
-          <div class="stat-icon icon-slate">
-            <i class="fa-solid fa-circle-dot"></i>
-          </div>
-          <div class="stat-info">
-            <span class="stat-label">To Do</span>
-            <h3 class="stat-value">{{ data.toDoTasks }}</h3>
-          </div>
-        </div>
+        <app-stat-card
+          label="To Do"
+          [value]="data.toDoTasks"
+          icon="fa-regular fa-circle-dot"
+          iconClass="icon-slate"
+          badgeText="Backlog"
+          badgeClass="badge-primary"
+          [subText]="'Pending start'"
+        ></app-stat-card>
 
-        <div class="stat-card">
-          <div class="stat-icon icon-blue">
-            <i class="fa-solid fa-spinner"></i>
-          </div>
-          <div class="stat-info">
-            <span class="stat-label">In Progress</span>
-            <h3 class="stat-value">{{ data.inProgressTasks }}</h3>
-          </div>
-        </div>
+        <app-stat-card
+          label="In Progress"
+          [value]="data.inProgressTasks"
+          icon="fa-solid fa-spinner fa-spin-pulse"
+          iconClass="icon-cyan"
+          badgeText="Ongoing"
+          badgeClass="badge-warning"
+          [subText]="'Under execution'"
+        ></app-stat-card>
 
-        <div class="stat-card">
-          <div class="stat-icon icon-emerald">
-            <i class="fa-solid fa-circle-check"></i>
-          </div>
-          <div class="stat-info">
-            <span class="stat-label">Completed</span>
-            <h3 class="stat-value">{{ data.doneTasks }}</h3>
-          </div>
-        </div>
+        <app-stat-card
+          label="Completed"
+          [value]="data.doneTasks"
+          icon="fa-solid fa-circle-check"
+          iconClass="icon-emerald"
+          badgeText="Done"
+          badgeClass="badge-success"
+          trendText="100% Quality"
+          [trendPositive]="true"
+        ></app-stat-card>
 
-        <div class="stat-card" [class.alert-overdue]="data.overdueTasks > 0">
-          <div class="stat-icon icon-red">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-          </div>
-          <div class="stat-info">
-            <span class="stat-label">Overdue</span>
-            <h3 class="stat-value text-red">{{ data.overdueTasks }}</h3>
-          </div>
-        </div>
+        <app-stat-card
+          label="Overdue Tasks"
+          [value]="data.overdueTasks"
+          icon="fa-solid fa-triangle-exclamation"
+          iconClass="icon-rose"
+          badgeText="Urgent"
+          badgeClass="badge-danger"
+          [trendPositive]="false"
+          [trendText]="data.overdueTasks > 0 ? 'Requires Attention' : 'On Track'"
+        ></app-stat-card>
       </div>
 
       <!-- Main Dashboard Content Split -->
-      <div class="dashboard-split" *ngIf="summary() as data">
+      <div class="dashboard-split" *ngIf="!loading() && summary() as data">
         <!-- Left: Recent Tasks Table with Interactive Tabs -->
         <div class="card recent-tasks-card">
           <div class="card-header flex-header">
             <div class="header-title-box">
               <i class="fa-solid fa-clock-rotate-left text-primary"></i>
-              <h3>Recent Tasks</h3>
+              <h3>Recent Tasks Activity</h3>
             </div>
             
             <!-- Filter Tabs -->
@@ -194,9 +209,10 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
               </button>
             </div>
           </div>
+
           <div class="card-body" style="padding: 0;">
             <div class="table-responsive">
-              <table class="custom-table">
+              <table class="custom-table" *ngIf="getFilteredRecentTasks().length > 0">
                 <thead>
                   <tr>
                     <th>Task</th>
@@ -210,58 +226,66 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
                   <tr *ngFor="let t of getFilteredRecentTasks()">
                     <td>
                       <div class="task-title-cell">
-                        <strong>{{ t.title }}</strong>
-                        <span *ngIf="t.teamName" class="task-team-tag">{{ t.teamName }}</span>
+                        <span class="task-main-title">{{ t.title }}</span>
+                        <span *ngIf="t.teamName" class="task-team-tag">
+                          <i class="fa-solid fa-users"></i> {{ t.teamName }}
+                        </span>
                       </div>
                     </td>
                     <td>
-                      <span class="badge" [ngClass]="'badge-' + (t.status | lowercase)">
-                        {{ t.status }}
-                      </span>
+                      <app-status-badge type="status" [value]="t.status"></app-status-badge>
                     </td>
                     <td>
-                      <span class="badge" [ngClass]="'badge-' + (t.priority | lowercase)">
-                        {{ t.priority }}
-                      </span>
+                      <app-status-badge type="priority" [value]="t.priority"></app-status-badge>
                     </td>
                     <td>
-                      <span class="assignee-text">{{ t.assignedToUserName || 'Unassigned' }}</span>
+                      <div class="assignee-cell">
+                        <div class="avatar-small">
+                          {{ (t.assignedToUserName || 'U').charAt(0).toUpperCase() }}
+                        </div>
+                        <span class="assignee-text">{{ t.assignedToUserName || 'Unassigned' }}</span>
+                      </div>
                     </td>
                     <td>
-                      <span [class.text-danger]="isOverdue(t.dueDate, t.status)">
+                      <span [class.text-danger]="isOverdue(t.dueDate, t.status)" class="date-chip">
+                        <i class="fa-regular fa-calendar"></i>
                         {{ t.dueDate ? (t.dueDate | date:'mediumDate') : 'No deadline' }}
                       </span>
                     </td>
                   </tr>
-                  <tr *ngIf="getFilteredRecentTasks().length === 0">
-                    <td colspan="5" class="empty-state-cell">
-                      <div class="empty-filter-wrap">
-                        <i class="fa-regular fa-clipboard"></i>
-                        <span>No tasks match the selected filter.</span>
-                      </div>
-                    </td>
-                  </tr>
                 </tbody>
               </table>
+
+              <app-empty-state
+                *ngIf="getFilteredRecentTasks().length === 0"
+                icon="fa-regular fa-clipboard"
+                title="No Tasks in this Category"
+                description="There are no recent tasks matching this status filter."
+                actionLabel="Create Task"
+                actionIcon="fa-solid fa-plus"
+                (actionClicked)="navigateToTasks()"
+              ></app-empty-state>
             </div>
           </div>
         </div>
 
-        <!-- Right Column: Priority & Activity -->
+        <!-- Right Column: Priority & Notifications -->
         <div class="dashboard-side-col">
           <!-- Priority Distribution -->
           <div class="card">
             <div class="card-header">
               <div class="header-title-box">
-                <i class="fa-solid fa-chart-column text-indigo"></i>
-                <h3>Priority Distribution</h3>
+                <i class="fa-solid fa-chart-pie text-indigo"></i>
+                <h3>Priority Breakdown</h3>
               </div>
             </div>
             <div class="card-body">
               <div class="priority-list">
                 <div *ngFor="let p of data.tasksByPriority" class="priority-item">
                   <div class="priority-info">
-                    <span class="priority-name">{{ p.priority }}</span>
+                    <span class="priority-name">
+                      <app-status-badge type="priority" [value]="p.priority" [size]="'sm'"></app-status-badge>
+                    </span>
                     <span class="priority-count">{{ p.count }} tasks</span>
                   </div>
                   <div class="progress-bar-track">
@@ -281,7 +305,7 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
             <div class="card-header">
               <div class="header-title-box">
                 <i class="fa-solid fa-bell text-warning"></i>
-                <h3>Latest Updates</h3>
+                <h3>Latest Broadcasts</h3>
               </div>
             </div>
             <div class="card-body" style="padding: 1rem;">
@@ -291,11 +315,14 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
                   <div class="activity-content">
                     <h5>{{ n.title }}</h5>
                     <p>{{ n.message }}</p>
-                    <span class="activity-time">{{ n.createdAt | date:'short' }}</span>
+                    <span class="activity-time">
+                      <i class="fa-regular fa-clock"></i> {{ n.createdAt | date:'short' }}
+                    </span>
                   </div>
                 </div>
                 <div *ngIf="data.recentNotifications.length === 0" class="empty-activity">
-                  No recent activities.
+                  <i class="fa-regular fa-bell-slash"></i>
+                  <span>No recent activities or alerts.</span>
                 </div>
               </div>
             </div>
@@ -313,14 +340,28 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
 
     .welcome-card {
       background: linear-gradient(135deg, #1e1b4b, #312e81 60%, #4338ca);
-      border-radius: var(--radius-xl);
-      padding: 2rem 2.25rem;
+      border-radius: var(--radius-xl, 20px);
+      padding: 2.25rem;
       color: #ffffff;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1.5rem;
-      box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.4);
+      box-shadow: 0 12px 30px -5px rgba(49, 46, 129, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .welcome-card::after {
+      content: '';
+      position: absolute;
+      right: -40px;
+      bottom: -40px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
     }
 
     .welcome-badge-row {
@@ -331,14 +372,18 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
     }
 
     .role-pill-badge {
-      display: inline-block;
-      padding: 0.25rem 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.3rem 0.85rem;
       background: rgba(255, 255, 255, 0.15);
-      border-radius: var(--radius-full);
+      backdrop-filter: blur(8px);
+      border-radius: 9999px;
       font-size: 0.75rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .greeting-pill {
@@ -347,170 +392,161 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
       gap: 0.35rem;
       background: rgba(253, 230, 138, 0.2);
       color: #fef08a;
-      padding: 0.2rem 0.65rem;
-      border-radius: var(--radius-full);
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
       font-size: 0.75rem;
       font-weight: 600;
+      border: 1px solid rgba(253, 230, 138, 0.3);
+    }
+
+    .welcome-content h2 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      margin: 0.25rem 0 0.5rem 0;
+      letter-spacing: -0.02em;
+    }
+
+    .welcome-content p {
+      font-size: 0.9375rem;
+      color: #c7d2fe;
+      margin: 0;
+      max-width: 620px;
+      line-height: 1.5;
+    }
+
+    .welcome-actions {
+      display: flex;
+      gap: 0.875rem;
+      flex-shrink: 0;
+    }
+
+    .btn-primary-glass {
+      background: #ffffff;
+      color: #312e81;
+      padding: 0.75rem 1.35rem;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.875rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary-glass:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      background: #f8fafc;
+    }
+
+    .btn-secondary-glass {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      padding: 0.75rem 1.35rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(8px);
+      transition: all 0.2s ease;
+    }
+
+    .btn-secondary-glass:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-2px);
     }
 
     /* Quick Launchpad */
     .quick-launchpad {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 1rem;
     }
 
     .launchpad-card {
       background: #ffffff;
-      border: 1px solid var(--slate-200);
-      border-radius: var(--radius-lg);
-      padding: 1rem 1.25rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 1.125rem 1.25rem;
       display: flex;
       align-items: center;
       gap: 0.875rem;
       text-decoration: none;
       color: inherit;
-      box-shadow: var(--shadow-sm);
-      transition: all 0.2s ease;
-      position: relative;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .launchpad-card:hover {
       transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
-      border-color: var(--primary-400);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+      border-color: #6366f1;
     }
 
     .launchpad-icon {
       width: 44px;
       height: 44px;
-      border-radius: var(--radius-md);
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.25rem;
+      font-size: 1.2rem;
       flex-shrink: 0;
     }
 
-    .icon-tasks {
-      background: #eef2ff;
-      color: #4f46e5;
-    }
-
-    .icon-calendar {
-      background: #f0fdf4;
-      color: #16a34a;
-    }
-
-    .icon-teams {
-      background: #fdf4ff;
-      color: #c026d3;
-    }
-
-    .icon-admin-tool {
-      background: #f5f3ff;
-      color: #7c3aed;
-    }
-
-    .icon-notif {
-      background: #fffbeb;
-      color: #d97706;
-    }
+    .icon-tasks { background: #eef2ff; color: #4f46e5; }
+    .icon-calendar { background: #f0fdf4; color: #16a34a; }
+    .icon-teams { background: #fdf4ff; color: #c026d3; }
+    .icon-admin-tool { background: #f5f3ff; color: #7c3aed; }
+    .icon-notif { background: #fffbeb; color: #d97706; }
 
     .launchpad-info h4 {
       font-size: 0.9375rem;
       font-weight: 700;
-      color: var(--slate-900);
+      color: #0f172a;
       margin: 0 0 0.125rem 0;
     }
 
     .launchpad-info p {
       font-size: 0.75rem;
-      color: var(--slate-500);
+      color: #64748b;
       margin: 0;
     }
 
     .launchpad-arrow {
       margin-left: auto;
-      color: var(--slate-300);
+      color: #94a3b8;
       font-size: 0.875rem;
       transition: transform 0.2s ease, color 0.2s ease;
     }
 
     .launchpad-card:hover .launchpad-arrow {
-      color: var(--primary-600);
-      transform: translateX(3px);
+      color: #4f46e5;
+      transform: translateX(4px);
     }
 
-    /* Flex Header & Tabs */
-    .flex-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      flex-wrap: wrap;
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1.25rem;
     }
 
-    .task-tabs-strip {
-      display: flex;
-      align-items: center;
-      gap: 0.375rem;
-      background: var(--slate-100);
-      padding: 0.25rem;
-      border-radius: var(--radius-md);
+    .dashboard-split {
+      display: grid;
+      grid-template-columns: 2.2fr 1fr;
+      gap: 1.5rem;
     }
 
-    .tab-pill {
-      background: none;
-      border: none;
-      padding: 0.35rem 0.75rem;
-      border-radius: var(--radius-sm);
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--slate-600);
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .tab-pill:hover {
-      color: var(--slate-900);
-    }
-
-    .tab-pill.active {
-      background: #ffffff;
-      color: var(--primary-700);
-      font-weight: 700;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .empty-filter-wrap {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      color: var(--slate-400);
-      padding: 1.5rem 0;
-      font-size: 0.875rem;
-    }
-
-    .welcome-content h2 {
-      font-size: 1.625rem;
-      font-weight: 800;
-      margin-bottom: 0.375rem;
-    }
-
-    .welcome-content p {
-      font-size: 0.875rem;
-      color: #c7d2fe;
-    }
-
-    .welcome-actions {
-      display: flex;
-      gap: 0.75rem;
-      flex-shrink: 0;
-    }
-
-    @media (max-width: 768px) {
+    @media (max-width: 1024px) {
+      .dashboard-split {
+        grid-template-columns: 1fr;
+      }
       .welcome-card {
         flex-direction: column;
         align-items: flex-start;
@@ -523,109 +559,160 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
       }
     }
 
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1.25rem;
-    }
-
-    .stat-card {
+    .card {
       background: #ffffff;
-      border-radius: var(--radius-lg);
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+    }
+
+    .card-header {
       padding: 1.25rem 1.5rem;
-      border: 1px solid var(--slate-200);
+      border-bottom: 1px solid #f1f5f9;
       display: flex;
       align-items: center;
+      justify-content: space-between;
+    }
+
+    .flex-header {
+      flex-wrap: wrap;
       gap: 1rem;
-      box-shadow: var(--shadow-sm);
-      transition: all 0.2s;
-    }
-
-    .stat-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
-    }
-
-    .stat-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: var(--radius-lg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.25rem;
-    }
-
-    .icon-indigo { background: #eef2ff; color: #4f46e5; }
-    .icon-slate { background: #f1f5f9; color: #475569; }
-    .icon-blue { background: #eff6ff; color: #2563eb; }
-    .icon-emerald { background: #ecfdf5; color: #059669; }
-    .icon-red { background: #fef2f2; color: #dc2626; }
-
-    .stat-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--slate-500);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .stat-value {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: var(--slate-900);
-      margin: 0;
-    }
-
-    .text-red { color: #dc2626; }
-    .alert-overdue { border-color: #fecaca; background: #fff5f5; }
-
-    .dashboard-split {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 1.5rem;
-    }
-
-    @media (max-width: 1024px) {
-      .dashboard-split {
-        grid-template-columns: 1fr;
-      }
     }
 
     .header-title-box {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.625rem;
     }
 
     .header-title-box h3 {
-      font-size: 1rem;
+      font-size: 1.05rem;
       font-weight: 700;
-      color: var(--slate-900);
+      color: #0f172a;
       margin: 0;
+    }
+
+    .text-primary { color: #4f46e5; }
+    .text-indigo { color: #6366f1; }
+    .text-warning { color: #f59e0b; }
+
+    .task-tabs-strip {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: #f1f5f9;
+      padding: 0.25rem;
+      border-radius: 8px;
+    }
+
+    .tab-pill {
+      background: none;
+      border: none;
+      padding: 0.4rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.775rem;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab-pill:hover {
+      color: #0f172a;
+    }
+
+    .tab-pill.active {
+      background: #ffffff;
+      color: #4f46e5;
+      font-weight: 700;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .custom-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    .custom-table th {
+      background: #f8fafc;
+      padding: 0.875rem 1.25rem;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      font-size: 0.725rem;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: left;
+    }
+
+    .custom-table td {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #f1f5f9;
+      color: #1e293b;
+      vertical-align: middle;
+    }
+
+    .custom-table tr:hover td {
+      background: #f8fafc;
     }
 
     .task-title-cell {
       display: flex;
       flex-direction: column;
-      gap: 0.125rem;
+      gap: 0.25rem;
+    }
+
+    .task-main-title {
+      font-weight: 700;
+      color: #0f172a;
     }
 
     .task-team-tag {
-      font-size: 0.6875rem;
-      color: var(--primary-600);
+      font-size: 0.725rem;
+      color: #4f46e5;
       font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .assignee-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .avatar-small {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #ffffff;
+      font-size: 0.725rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .assignee-text {
       font-weight: 600;
-      color: var(--slate-700);
+      color: #334155;
     }
 
-    .empty-state-cell {
-      text-align: center;
-      padding: 2rem;
-      color: var(--slate-400);
+    .date-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8125rem;
+      color: #64748b;
+    }
+
+    .text-danger {
+      color: #dc2626 !important;
+      font-weight: 700;
     }
 
     .dashboard-side-col {
@@ -637,34 +724,41 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
     .priority-list {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 1.125rem;
+      padding: 1.25rem;
     }
 
     .priority-info {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       font-size: 0.8125rem;
       font-weight: 600;
       margin-bottom: 0.375rem;
     }
 
+    .priority-count {
+      color: #64748b;
+      font-size: 0.775rem;
+    }
+
     .progress-bar-track {
-      height: 8px;
-      background: var(--slate-100);
-      border-radius: var(--radius-full);
+      height: 7px;
+      background: #f1f5f9;
+      border-radius: 9999px;
       overflow: hidden;
     }
 
     .progress-bar-fill {
       height: 100%;
-      border-radius: var(--radius-full);
+      border-radius: 9999px;
       transition: width 0.4s ease;
     }
 
     .fill-low { background: #94a3b8; }
-    .fill-medium { background: #10b981; }
-    .fill-high { background: #f59e0b; }
-    .fill-urgent { background: #ef4444; }
+    .fill-medium { background: #0284c7; }
+    .fill-high { background: #ea580c; }
+    .fill-urgent, .fill-critical { background: #e11d48; }
 
     .activity-feed {
       display: flex;
@@ -681,46 +775,44 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
     .activity-dot {
       width: 10px;
       height: 10px;
-      border-radius: var(--radius-full);
-      background: var(--primary-500);
+      border-radius: 50%;
+      background: #4f46e5;
       margin-top: 0.375rem;
       flex-shrink: 0;
+      box-shadow: 0 0 6px rgba(79, 70, 229, 0.4);
     }
 
     .activity-content h5 {
-      font-size: 0.8125rem;
+      font-size: 0.825rem;
       font-weight: 700;
-      color: var(--slate-800);
+      color: #1e293b;
       margin: 0 0 0.125rem 0;
     }
 
     .activity-content p {
       font-size: 0.75rem;
-      color: var(--slate-600);
+      color: #64748b;
       margin: 0 0 0.25rem 0;
+      line-height: 1.4;
     }
 
     .activity-time {
-      font-size: 0.6875rem;
-      color: var(--slate-400);
+      font-size: 0.7rem;
+      color: #94a3b8;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
     }
 
     .empty-activity {
       text-align: center;
-      padding: 1.5rem;
-      color: var(--slate-400);
+      padding: 1.75rem;
+      color: #94a3b8;
       font-size: 0.8125rem;
-    }
-
-    .loading-state {
-      padding: 3rem;
-      text-align: center;
-      color: var(--slate-500);
-      font-size: 1.125rem;
       display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
       align-items: center;
-      justify-content: center;
-      gap: 0.75rem;
     }
   `]
 })
@@ -769,7 +861,11 @@ export class DashboardComponent implements OnInit {
   }
 
   isOverdue(dueDate?: string, status?: string): boolean {
-    if (!dueDate || status === 'Done') return false;
+    if (!dueDate || status === 'Done' || status === 'Completed') return false;
     return new Date(dueDate) < new Date();
+  }
+
+  navigateToTasks() {
+    window.location.href = '/tasks';
   }
 }

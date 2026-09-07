@@ -84,6 +84,15 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
+
+// Configure Response Compression for high throughput
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.WebHost.UseUrls("http://localhost:5000;http://0.0.0.0:5000");
 
@@ -156,6 +165,9 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Management System API v1");
     });
 }
+
+// Enable high performance response compression
+app.UseResponseCompression();
 
 // Enable cross-origin resource sharing
 app.UseCors("AllowFrontend");

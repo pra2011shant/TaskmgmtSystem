@@ -6,11 +6,13 @@ import { User } from '../../core/models/auth.model';
 import { TeamService } from '../../core/services/team.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import { SkeletonLoaderComponent } from '../../components/ui/skeleton-loader.component';
+import { EmptyStateComponent } from '../../components/ui/empty-state.component';
 
 @Component({
   selector: 'app-team-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SkeletonLoaderComponent, EmptyStateComponent],
   template: `
     <div class="teams-page">
       <div class="page-header">
@@ -25,10 +27,7 @@ import { ToastService } from '../../core/services/toast.service';
       </div>
 
       <!-- Loading State -->
-      <div *ngIf="loading()" class="loading-state">
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        <span>Loading teams...</span>
-      </div>
+      <app-skeleton-loader *ngIf="loading()" type="cards" [count]="3"></app-skeleton-loader>
 
       <!-- Teams Grid -->
       <div *ngIf="!loading()" class="teams-grid">
@@ -109,11 +108,15 @@ import { ToastService } from '../../core/services/toast.service';
           </div>
         </div>
 
-        <div *ngIf="teams().length === 0" class="no-teams-card">
-          <i class="fa-solid fa-users-slash"></i>
-          <h3>No Teams Found</h3>
-          <p>Create your first team to start assigning tasks and collaborating.</p>
-        </div>
+        <app-empty-state
+          *ngIf="teams().length === 0"
+          icon="fa-solid fa-users-slash"
+          title="No Teams Found"
+          description="Create your first workspace team to start organizing members and assigning tasks."
+          [actionLabel]="authService.isManager() ? 'Create Team' : undefined"
+          actionIcon="fa-solid fa-plus"
+          (actionClicked)="openCreateModal()"
+        ></app-empty-state>
       </div>
 
       <!-- Modal: Create Team -->

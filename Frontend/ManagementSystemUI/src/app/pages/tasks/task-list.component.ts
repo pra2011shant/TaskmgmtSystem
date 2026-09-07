@@ -11,11 +11,23 @@ import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { TaskModalComponent } from './task-modal.component';
 import { TaskDetailModalComponent } from './task-detail-modal.component';
+import { StatusBadgeComponent } from '../../components/ui/status-badge.component';
+import { SkeletonLoaderComponent } from '../../components/ui/skeleton-loader.component';
+import { EmptyStateComponent } from '../../components/ui/empty-state.component';
 
 @Component({
   selector: 'app-task-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TaskModalComponent, TaskDetailModalComponent],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    RouterModule, 
+    TaskModalComponent, 
+    TaskDetailModalComponent,
+    StatusBadgeComponent,
+    SkeletonLoaderComponent,
+    EmptyStateComponent
+  ],
   template: `
     <div class="tasks-page">
       <!-- Header Actions & Controls -->
@@ -157,10 +169,7 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
       </div>
 
       <!-- Loading State -->
-      <div *ngIf="loading()" class="loading-state">
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        <span>Loading tasks...</span>
-      </div>
+      <app-skeleton-loader *ngIf="loading()" [type]="viewMode() === 'board' ? 'kanban' : 'table'"></app-skeleton-loader>
 
       <!-- 1. KANBAN BOARD VIEW -->
       <div *ngIf="!loading() && viewMode() === 'board'" class="kanban-board-container">
@@ -339,7 +348,7 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
       <div *ngIf="!loading() && viewMode() === 'table'" class="card">
         <div class="card-body" style="padding: 0;">
           <div class="table-responsive">
-            <table class="custom-table">
+            <table class="custom-table" *ngIf="tasks().length > 0">
               <thead>
                 <tr>
                   <th>Task</th>
@@ -363,10 +372,10 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
                     </div>
                   </td>
                   <td>
-                    <span class="badge" [ngClass]="'badge-' + (t.status | lowercase)">{{ t.status }}</span>
+                    <app-status-badge type="status" [value]="t.status" [size]="'sm'"></app-status-badge>
                   </td>
                   <td>
-                    <span class="badge" [ngClass]="'badge-' + (t.priority | lowercase)">{{ t.priority }}</span>
+                    <app-status-badge type="priority" [value]="t.priority" [size]="'sm'"></app-status-badge>
                   </td>
                   <td>{{ t.teamName || 'General' }}</td>
                   <td>
@@ -411,11 +420,18 @@ import { TaskDetailModalComponent } from './task-detail-modal.component';
                     </div>
                   </td>
                 </tr>
-                <tr *ngIf="tasks().length === 0">
-                  <td [attr.colspan]="authService.isAdmin() ? 9 : 7" class="empty-state-cell">No tasks match your search or filter.</td>
-                </tr>
               </tbody>
             </table>
+
+            <app-empty-state
+              *ngIf="tasks().length === 0"
+              icon="fa-solid fa-list-check"
+              title="No Tasks Found"
+              description="No tasks match the selected filter criteria or search query."
+              [actionLabel]="authService.isManager() ? 'Create New Task' : undefined"
+              actionIcon="fa-solid fa-plus"
+              (actionClicked)="openCreateModal()"
+            ></app-empty-state>
           </div>
         </div>
       </div>

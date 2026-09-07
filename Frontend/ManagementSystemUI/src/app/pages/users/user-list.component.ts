@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { User } from '../../core/models/auth.model';
 import { AuthService } from '../../core/services/auth.service';
+import { StatusBadgeComponent } from '../../components/ui/status-badge.component';
+import { SkeletonLoaderComponent } from '../../components/ui/skeleton-loader.component';
+import { EmptyStateComponent } from '../../components/ui/empty-state.component';
 
 /**
  * Administrative User Management Directory
@@ -14,7 +17,13 @@ import { AuthService } from '../../core/services/auth.service';
 @Component({
   selector: 'app-user-list',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [
+    CommonModule, 
+    RouterModule, 
+    StatusBadgeComponent, 
+    SkeletonLoaderComponent, 
+    EmptyStateComponent
+  ],
   template: `
     <div class="users-page">
       <div class="page-header">
@@ -34,16 +43,13 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
       </div>
 
-      <!-- Loading State -->
-      <div *ngIf="loading()" class="loading-state">
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        <span>Loading users directory...</span>
-      </div>
+      <!-- Loading Skeleton State -->
+      <app-skeleton-loader *ngIf="loading()" type="table" [count]="5"></app-skeleton-loader>
 
       <div *ngIf="!loading()" class="card">
         <div class="card-body" style="padding: 0;">
           <div class="table-responsive">
-            <table class="custom-table">
+            <table class="custom-table" *ngIf="users().length > 0">
               <thead>
                 <tr>
                   <th>User</th>
@@ -60,17 +66,17 @@ import { AuthService } from '../../core/services/auth.service';
                 <tr *ngFor="let u of users()">
                   <td>
                     <div style="display: flex; align-items: center; gap: 0.75rem;">
-                      <div class="avatar-user">{{ u.fullName.charAt(0) }}</div>
+                      <div class="avatar-user">{{ u.fullName.charAt(0).toUpperCase() }}</div>
                       <div>
                         <strong>{{ u.fullName }}</strong>
                       </div>
                     </div>
                   </td>
-                  <td>{{ u.email }}</td>
                   <td>
-                    <span class="badge" [ngClass]="'badge-role-' + (u.role | lowercase)">
-                      {{ u.role }}
-                    </span>
+                    <span class="email-text">{{ u.email }}</span>
+                  </td>
+                  <td>
+                    <app-status-badge type="role" [value]="u.role"></app-status-badge>
                   </td>
                   <!-- Admin Audit Columns -->
                   <td *ngIf="authService.isAdmin()">
@@ -88,11 +94,18 @@ import { AuthService } from '../../core/services/auth.service';
                   </td>
                   <td>{{ u.createdAt | date:'mediumDate' }}</td>
                 </tr>
-                <tr *ngIf="users().length === 0">
-                  <td [attr.colspan]="authService.isAdmin() ? 7 : 4" class="empty-state-cell">No users registered yet.</td>
-                </tr>
               </tbody>
             </table>
+
+            <app-empty-state
+              *ngIf="users().length === 0"
+              icon="fa-solid fa-users-slash"
+              title="No Users Registered"
+              description="No user accounts were found in the directory."
+              actionLabel="Register User"
+              actionIcon="fa-solid fa-user-plus"
+              (actionClicked)="navigateToRegister()"
+            ></app-empty-state>
           </div>
         </div>
       </div>
@@ -107,73 +120,146 @@ import { AuthService } from '../../core/services/auth.service';
 
     .page-header {
       display: flex;
-      align-items: flex-start;
       justify-content: space-between;
+      align-items: center;
       gap: 1rem;
       flex-wrap: wrap;
     }
 
     .admin-badge-wrap {
-      margin-bottom: 0.375rem;
+      margin-bottom: 0.5rem;
     }
 
     .admin-badge {
       display: inline-flex;
       align-items: center;
-      gap: 0.375rem;
+      gap: 0.35rem;
+      background: rgba(99, 102, 241, 0.1);
+      color: #4f46e5;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
       font-size: 0.75rem;
       font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 0.25rem 0.625rem;
-      border-radius: var(--radius-full);
-      background: rgba(99, 102, 241, 0.1);
-      color: var(--primary-600);
-      border: 1px solid rgba(99, 102, 241, 0.25);
+      letter-spacing: 0.025em;
+      border: 1px solid rgba(99, 102, 241, 0.2);
     }
 
     .section-title {
-      font-size: 1.375rem;
+      font-size: 1.5rem;
       font-weight: 800;
-      color: var(--slate-900);
-      margin: 0;
+      color: #0f172a;
+      margin: 0 0 0.25rem 0;
+      letter-spacing: -0.02em;
     }
 
     .section-desc {
-      font-size: 0.8125rem;
-      color: var(--slate-500);
-      margin: 0.25rem 0 0;
+      font-size: 0.875rem;
+      color: #64748b;
+      margin: 0;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+    }
+
+    .custom-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    .custom-table th {
+      background: #f8fafc;
+      padding: 0.875rem 1.25rem;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      font-size: 0.725rem;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: left;
+    }
+
+    .custom-table td {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #f1f5f9;
+      color: #1e293b;
+      vertical-align: middle;
+    }
+
+    .custom-table tr:hover td {
+      background: #f8fafc;
     }
 
     .avatar-user {
-      width: 32px;
-      height: 32px;
-      border-radius: var(--radius-full);
-      background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
       color: #ffffff;
-      font-size: 0.75rem;
-      font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-weight: 700;
+      font-size: 0.875rem;
+    }
+
+    .email-text {
+      color: #475569;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.8125rem;
     }
 
     .status-pill-active {
       display: inline-flex;
       align-items: center;
       gap: 0.25rem;
-      font-size: 0.6875rem;
-      font-weight: 700;
-      color: var(--success);
       background: rgba(16, 185, 129, 0.1);
-      padding: 0.125rem 0.5rem;
-      border-radius: var(--radius-full);
+      color: #059669;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      font-size: 0.725rem;
+      font-weight: 700;
+      border: 1px solid rgba(16, 185, 129, 0.25);
     }
 
     .remarks-tag {
-      font-size: 0.75rem;
-      color: var(--slate-600);
-      font-style: italic;
+      display: inline-block;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #64748b;
+      font-size: 0.8125rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .btn-primary {
+      background: #4f46e5;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+    }
+
+    .btn-primary:hover {
+      background: #4338ca;
+      transform: translateY(-1px);
     }
   `]
 })
@@ -183,6 +269,11 @@ export class UserListComponent implements OnInit {
   loading = signal(true);
 
   ngOnInit() {
+    this.loadUsers();
+  }
+
+  loadUsers() {
+    this.loading.set(true);
     this.authService.getAllUsers().subscribe({
       next: (res) => {
         this.users.set(res);
@@ -192,5 +283,9 @@ export class UserListComponent implements OnInit {
         this.loading.set(false);
       }
     });
+  }
+
+  navigateToRegister() {
+    window.location.href = '/register-user';
   }
 }
