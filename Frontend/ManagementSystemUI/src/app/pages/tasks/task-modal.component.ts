@@ -169,8 +169,27 @@ export class TaskModalComponent implements OnInit {
     if (this.task) {
       this.title = this.task.title;
       this.description = this.task.description;
-      this.status = this.task.statusValue || 1;
-      this.priority = this.task.priorityValue || 2;
+      
+      // Robust status parsing
+      if (this.task.statusValue) {
+        this.status = this.task.statusValue;
+      } else if (typeof this.task.status === 'string') {
+        const s = this.task.status.toLowerCase();
+        this.status = s === 'done' ? 3 : s === 'inprogress' ? 2 : 1;
+      } else {
+        this.status = Number(this.task.status) || 1;
+      }
+
+      // Robust priority parsing
+      if (this.task.priorityValue) {
+        this.priority = this.task.priorityValue;
+      } else if (typeof this.task.priority === 'string') {
+        const p = this.task.priority.toLowerCase();
+        this.priority = p === 'urgent' ? 4 : p === 'high' ? 3 : p === 'low' ? 1 : 2;
+      } else {
+        this.priority = Number(this.task.priority) || 2;
+      }
+
       this.teamId = this.task.teamId || null;
       this.assignedToUserId = this.task.assignedToUserId || null;
       this.remarks = this.task.remarks || '';

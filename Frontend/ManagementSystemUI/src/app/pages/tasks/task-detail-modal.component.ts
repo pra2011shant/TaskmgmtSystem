@@ -5,18 +5,19 @@ import { TaskComment, TaskItem } from '../../core/models/task.model';
 import { TaskService } from '../../core/services/task.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import { StatusBadgeComponent } from '../../components/ui/status-badge.component';
 
 @Component({
   selector: 'app-task-detail-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, StatusBadgeComponent],
   template: `
     <div class="modal-overlay" (click)="close()">
       <div class="modal-content modal-large" (click)="$event.stopPropagation()">
         <!-- Header -->
         <div class="modal-header">
           <div class="task-title-group">
-            <span class="badge" [ngClass]="'badge-' + (task.status | lowercase)">{{ task.status }}</span>
+            <app-status-badge type="status" [value]="task.status"></app-status-badge>
             <h3 class="task-modal-title">{{ task.title }}</h3>
           </div>
           <button class="btn-icon" (click)="close()"><i class="fa-solid fa-xmark"></i></button>
@@ -64,9 +65,7 @@ import { ToastService } from '../../core/services/toast.service';
           <div class="meta-grid">
             <div class="meta-card">
               <span class="meta-label">Priority</span>
-              <span class="badge" [ngClass]="'badge-' + (task.priority | lowercase)">
-                {{ task.priority }}
-              </span>
+              <app-status-badge type="priority" [value]="task.priority"></app-status-badge>
             </div>
 
             <div class="meta-card">
