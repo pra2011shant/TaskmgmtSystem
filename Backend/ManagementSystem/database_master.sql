@@ -5,7 +5,7 @@
 -- Complete, single-source-of-truth SQL Server script for 'ManagementSystem'.
 -- Includes:
 --   1. Database Initialization
---   2. 18 Relational Enterprise Tables (RBAC, Multi-Org, Projects, Milestones, Tasks, TimeLogs)
+--   2. 19 Relational Enterprise Tables (RBAC, Multi-Org, Projects, Milestones, Tasks, TimeLogs, Audit, Views)
 --   3. Non-Clustered High-Performance Indexes
 --   4. Stored Procedures Suite (CRUD, Analytics, Bulk Operations, Leaderboards)
 --   5. Full Enterprise Dummy Dataset (Realistic seeds for immediate testing)
@@ -403,6 +403,21 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_AuditLogs_Entity_Times
 BEGIN
     CREATE NONCLUSTERED INDEX IX_AuditLogs_Entity_Timestamp 
     ON AuditLogs (EntityName, EntityId, Timestamp);
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_TaskViews_TaskId_UserId' AND object_id = OBJECT_ID('TaskViews'))
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_TaskViews_TaskId_UserId 
+    ON TaskViews (TaskId, UserId, ViewedAt);
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Users_Email_IsDeleted' AND object_id = OBJECT_ID('Users'))
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Users_Email_IsDeleted 
+    ON Users (Email, IsDeleted) 
+    INCLUDE (FullName, Role, IsOnline, LastActivityDate);
 END
 GO
 
