@@ -33,6 +33,7 @@ namespace ManagementSystem.Data
         public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
         public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+        public DbSet<TaskView> TaskViews => Set<TaskView>();
 
         /// <summary>
         /// Configures database schema constraints, foreign key cascades, unique indexes,
@@ -252,6 +253,22 @@ namespace ManagementSystem.Data
 
             modelBuilder.Entity<AuditLog>()
                 .HasIndex(a => a.Timestamp);
+
+            // 16. TaskView Entity
+            modelBuilder.Entity<TaskView>()
+                .HasOne(tv => tv.Task)
+                .WithMany()
+                .HasForeignKey(tv => tv.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TaskView>()
+                .HasOne(tv => tv.User)
+                .WithMany()
+                .HasForeignKey(tv => tv.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TaskView>()
+                .HasIndex(tv => new { tv.TaskId, tv.UserId });
         }
     }
 }

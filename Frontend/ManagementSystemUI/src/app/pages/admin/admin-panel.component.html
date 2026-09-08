@@ -1,51 +1,341 @@
 <div class="admin-page">
+  <!-- Page Header & Action Bar -->
   <div class="admin-header">
     <div>
-      <h1 class="page-title">Enterprise Administration Center</h1>
-      <p class="page-subtitle">Configure granular security permissions, inspect system audit logs & telemetry</p>
+      <div class="header-badge">
+        <i class="fa-solid fa-shield-halved"></i> Security & Operations Hub
+      </div>
+      <h1 class="page-title">Enterprise System Activity & Audit Monitoring</h1>
+      <p class="page-subtitle">Real-time presence tracking, security compliance trail, and granular RBAC governance</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary refresh-btn" (click)="refreshCurrentTab()" [disabled]="isRefreshing()">
+        <i class="fa-solid fa-arrows-rotate" [class.fa-spin]="isRefreshing()"></i>
+        <span>Refresh Feed</span>
+      </button>
     </div>
   </div>
 
+  <!-- Real-Time Activity Telemetry Banner -->
+  <div class="activity-kpi-grid">
+    <div class="kpi-card kpi-online">
+      <div class="kpi-icon-wrap">
+        <i class="fa-solid fa-users-viewfinder"></i>
+      </div>
+      <div class="kpi-body">
+        <div class="kpi-val">{{ activityStats().activeUsers }}</div>
+        <div class="kpi-lbl">Active Users (Online)</div>
+      </div>
+      <div class="live-dot" title="Real-time heartbeat active"></div>
+    </div>
+
+    <div class="kpi-card kpi-logins">
+      <div class="kpi-icon-wrap">
+        <i class="fa-solid fa-key"></i>
+      </div>
+      <div class="kpi-body">
+        <div class="kpi-val">{{ activityStats().todayLogins }}</div>
+        <div class="kpi-lbl">Today's Logins</div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-updates">
+      <div class="kpi-icon-wrap">
+        <i class="fa-solid fa-pen-to-square"></i>
+      </div>
+      <div class="kpi-body">
+        <div class="kpi-val">{{ activityStats().tasksUpdatedToday }}</div>
+        <div class="kpi-lbl">Tasks Updated Today</div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-deletions">
+      <div class="kpi-icon-wrap">
+        <i class="fa-solid fa-trash-can"></i>
+      </div>
+      <div class="kpi-body">
+        <div class="kpi-val">{{ activityStats().deletionsToday }}</div>
+        <div class="kpi-lbl">Soft Deletions Today</div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-mutations">
+      <div class="kpi-icon-wrap">
+        <i class="fa-solid fa-list-check"></i>
+      </div>
+      <div class="kpi-body">
+        <div class="kpi-val">{{ activityStats().totalAuditLogs }}</div>
+        <div class="kpi-lbl">Total Audited Events</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
   <div class="tabs-nav">
-    <button class="tab-btn" [class.active]="activeTab() === 'permissions'" (click)="setTab('permissions')">
-      Roles & Granular Permissions
+    <button class="tab-btn" [class.active]="activeTab() === 'presence'" (click)="setTab('presence')">
+      <i class="fa-solid fa-user-clock"></i>
+      <span>User Presence & Sessions</span>
+      <span class="tab-badge online-count">{{ activityStats().activeUsers }}</span>
     </button>
     <button class="tab-btn" [class.active]="activeTab() === 'audit'" (click)="setTab('audit')">
-      Security Audit Trail
+      <i class="fa-solid fa-clock-rotate-left"></i>
+      <span>Security Audit Trail</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'permissions'" (click)="setTab('permissions')">
+      <i class="fa-solid fa-user-shield"></i>
+      <span>Roles & Granular Permissions</span>
     </button>
     <button class="tab-btn" [class.active]="activeTab() === 'stats'" (click)="setTab('stats')">
-      System Telemetry & Architecture
+      <i class="fa-solid fa-server"></i>
+      <span>System Telemetry</span>
     </button>
   </div>
 
   @if (isLoading()) {
     <div class="loading-state">
       <div class="spinner"></div>
-      <span>Loading enterprise admin data...</span>
+      <span>Loading enterprise activity telemetry...</span>
     </div>
   } @else {
+
+    <!-- TAB 1: USER PRESENCE & SESSIONS -->
+    @if (activeTab() === 'presence') {
+      <div class="admin-card">
+        <div class="toolbar-bar">
+          <div class="search-input-group">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input 
+              type="text" 
+              placeholder="Search user name, email, department, or IP..." 
+              [ngModel]="presenceSearch()"
+              (ngModelChange)="presenceSearch.set($event)"
+              class="form-control-search"
+            />
+          </div>
+
+          <div class="filter-pills">
+            <button class="filter-pill" [class.active]="presenceRoleFilter() === 'ALL'" (click)="presenceRoleFilter.set('ALL')">All Roles</button>
+            <button class="filter-pill" [class.active]="presenceRoleFilter() === 'ADMIN'" (click)="presenceRoleFilter.set('ADMIN')">Admin</button>
+            <button class="filter-pill" [class.active]="presenceRoleFilter() === 'MANAGER'" (click)="presenceRoleFilter.set('MANAGER')">Manager</button>
+            <button class="filter-pill" [class.active]="presenceRoleFilter() === 'USER'" (click)="presenceRoleFilter.set('USER')">User</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>User Identity</th>
+                <th>Role</th>
+                <th>Live Status</th>
+                <th>Login Time</th>
+                <th>Last Activity</th>
+                <th>Last Logout</th>
+                <th>Client IP</th>
+                <th>Device / Client</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (user of filteredPresenceList(); track user.id) {
+                <tr [class.row-online]="user.isOnline">
+                  <td>
+                    <div class="user-cell">
+                      <div class="user-avatar" [class.avatar-online]="user.isOnline">
+                        {{ user.fullName.charAt(0) }}
+                      </div>
+                      <div>
+                        <strong>{{ user.fullName }}</strong>
+                        <div class="cell-sub">{{ user.email }}</div>
+                        <span class="dept-badge" *ngIf="user.department">{{ user.department }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="'badge-role-' + (user.role | lowercase)">
+                      {{ user.role }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (user.isOnline) {
+                      <span class="status-pill status-pill-online">
+                        <span class="status-dot-pulse"></span> Online Now
+                      </span>
+                    } @else {
+                      <span class="status-pill status-pill-offline">
+                        <span class="status-dot-dim"></span> Offline
+                      </span>
+                    }
+                  </td>
+                  <td>
+                    @if (user.loginTime) {
+                      <div class="time-main">{{ user.loginTime | date:'dd-MMM, hh:mm a' }}</div>
+                    } @else {
+                      <span class="text-muted">—</span>
+                    }
+                  </td>
+                  <td>
+                    @if (user.lastActivity) {
+                      <div class="time-main">{{ user.lastActivity | date:'hh:mm a' }}</div>
+                      <div class="cell-sub">{{ user.lastActivity | date:'dd-MMM' }}</div>
+                    } @else {
+                      <span class="text-muted">—</span>
+                    }
+                  </td>
+                  <td>
+                    @if (user.lastLogout) {
+                      <div class="time-main">{{ user.lastLogout | date:'hh:mm a' }}</div>
+                      <div class="cell-sub">{{ user.lastLogout | date:'dd-MMM' }}</div>
+                    } @else {
+                      <span class="text-muted">Active Session</span>
+                    }
+                  </td>
+                  <td>
+                    <code>{{ user.lastIpAddress || '127.0.0.1' }}</code>
+                  </td>
+                  <td>
+                    <span class="agent-preview" [title]="user.lastUserAgent || ''">
+                      <i class="fa-solid fa-laptop"></i>
+                      {{ user.lastUserAgent ? (user.lastUserAgent.includes('Windows') ? 'Windows Web' : 'Web Client') : 'Browser' }}
+                    </span>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="8" class="empty-cell">No users found matching your search criteria.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- TAB 2: AUDIT TRAIL -->
+    @if (activeTab() === 'audit') {
+      <div class="admin-card">
+        <div class="toolbar-bar">
+          <div class="search-input-group">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input 
+              type="text" 
+              placeholder="Search audit descriptions, records, users, IDs..." 
+              [ngModel]="auditSearch()"
+              (ngModelChange)="auditSearch.set($event)"
+              (keyup.enter)="loadAuditLogs()"
+              class="form-control-search"
+            />
+          </div>
+
+          <div class="filter-dropdowns">
+            <select [ngModel]="auditActionFilter()" (ngModelChange)="auditActionFilter.set($event); loadAuditLogs()" class="form-select">
+              <option value="ALL">All Actions</option>
+              <option value="LOGIN">LOGIN</option>
+              <option value="LOGOUT">LOGOUT</option>
+              <option value="CREATE">CREATE</option>
+              <option value="UPDATE">UPDATE</option>
+              <option value="STATUS_CHANGE">STATUS_CHANGE</option>
+              <option value="DELETE">DELETE</option>
+            </select>
+
+            <select [ngModel]="auditModuleFilter()" (ngModelChange)="auditModuleFilter.set($event); loadAuditLogs()" class="form-select">
+              <option value="ALL">All Modules</option>
+              <option value="Task">Task</option>
+              <option value="Authentication">Authentication</option>
+              <option value="Team">Team</option>
+              <option value="User">User</option>
+              <option value="Project">Project</option>
+            </select>
+
+            <button class="btn btn-primary" (click)="loadAuditLogs()">Filter Logs</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Timestamp (UTC)</th>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Module</th>
+                <th>Target Record</th>
+                <th>Description</th>
+                <th>Client IP</th>
+                <th>Modifications</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (log of auditLogs(); track log.id) {
+                <tr>
+                  <td>
+                    <div class="time-main">{{ log.timestamp | date:'hh:mm:ss a' }}</div>
+                    <div class="cell-sub">{{ log.timestamp | date:'dd-MMM-yyyy' }}</div>
+                  </td>
+                  <td>
+                    <strong>{{ log.userName || 'System' }}</strong>
+                    <div class="cell-sub">{{ log.userRole || 'Auth' }}</div>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="getActionBadgeClass(log.action)">
+                      {{ log.action }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="module-pill">{{ log.module || log.entityName }}</span>
+                  </td>
+                  <td>
+                    <strong class="record-id">#{{ log.entityId || 'N/A' }}</strong>
+                  </td>
+                  <td>
+                    <span class="log-desc">{{ log.description || (log.action + ' on ' + log.entityName) }}</span>
+                  </td>
+                  <td>
+                    <code>{{ log.ipAddress || '127.0.0.1' }}</code>
+                  </td>
+                  <td>
+                    @if (log.oldValueJson || log.newValueJson) {
+                      <button class="btn btn-xs btn-diff" (click)="viewAuditDetails(log)">
+                        <i class="fa-solid fa-code-compare"></i> View Diff
+                      </button>
+                    } @else {
+                      <span class="text-muted">—</span>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="8" class="empty-cell">No audit log records match the search filter.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- TAB 3: PERMISSIONS MATRIX -->
     @if (activeTab() === 'permissions') {
       <div class="admin-card">
         <div class="role-selector-bar">
-          <label>Target RBAC Role:</label>
+          <label>Target RBAC Role Matrix:</label>
           <div class="role-buttons">
             <button 
               class="role-pill" 
               [class.active]="selectedRole() === 2" 
               (click)="onRoleChange(2)"
             >
-              Team Manager (Manager)
+              <i class="fa-solid fa-user-tie"></i> Team Manager (Manager)
             </button>
             <button 
               class="role-pill" 
               [class.active]="selectedRole() === 3" 
               (click)="onRoleChange(3)"
             >
-              Team Member (User)
+              <i class="fa-solid fa-user"></i> Team Member (User)
             </button>
           </div>
           <button class="btn btn-primary save-perms-btn" (click)="savePermissions()">
-            Save Permission Matrix
+            <i class="fa-solid fa-floppy-disk"></i> Save Permissions Matrix
           </button>
         </div>
 
@@ -59,74 +349,32 @@
               />
               <div class="perm-info">
                 <span class="perm-name">{{ perm }}</span>
-                <span class="perm-desc">Grant access for {{ perm }} capability</span>
+                <span class="perm-desc">Grant access for {{ perm }} operation</span>
               </div>
             </label>
           }
         </div>
       </div>
-    } @else if (activeTab() === 'audit') {
-      <div class="admin-card">
-        <div class="audit-filter-bar">
-          <input 
-            type="text" 
-            placeholder="Filter by entity (e.g. Task, User, Team)..." 
-            [(ngModel)]="auditFilterEntity"
-            (keyup.enter)="loadTab()"
-            class="audit-search"
-          />
-          <button class="btn btn-secondary" (click)="loadTab()">Search Logs</button>
-        </div>
+    }
 
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Timestamp (UTC)</th>
-              <th>User</th>
-              <th>Action</th>
-              <th>Entity</th>
-              <th>Entity ID</th>
-              <th>IP Address</th>
-              <th>Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (log of auditLogs(); track log.id) {
-              <tr>
-                <td>{{ log.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</td>
-                <td>
-                  <strong>{{ log.userName || 'System' }}</strong>
-                  <div class="cell-sub">{{ log.userRole || 'Auth' }}</div>
-                </td>
-                <td><span class="badge badge-info">{{ log.action }}</span></td>
-                <td>{{ log.entityName }}</td>
-                <td>{{ log.entityId || 'N/A' }}</td>
-                <td><code>{{ log.ipAddress || '127.0.0.1' }}</code></td>
-                <td>
-                  <button class="btn-xs" (click)="viewAuditDetails(log)">View Diff</button>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    } @else {
+    <!-- TAB 4: TELEMETRY -->
+    @if (activeTab() === 'stats') {
       <div class="stats-grid">
         <div class="stat-box">
           <div class="stat-number">{{ systemStats()?.totalUsers }}</div>
-          <div class="stat-label">Active Users</div>
+          <div class="stat-label">Enrolled Accounts</div>
         </div>
         <div class="stat-box">
           <div class="stat-number">{{ systemStats()?.totalTeams }}</div>
-          <div class="stat-label">Total Teams</div>
+          <div class="stat-label">Configured Teams</div>
         </div>
         <div class="stat-box">
           <div class="stat-number">{{ systemStats()?.totalTasks }}</div>
-          <div class="stat-label">Total Tasks</div>
+          <div class="stat-label">Managed Tasks</div>
         </div>
         <div class="stat-box">
           <div class="stat-number">{{ systemStats()?.totalComments }}</div>
-          <div class="stat-label">Comments & Discussions</div>
+          <div class="stat-label">Collaboration Comments</div>
         </div>
         <div class="stat-box">
           <div class="stat-number">{{ systemStats()?.totalAttachments }}</div>
@@ -134,39 +382,113 @@
         </div>
         <div class="stat-box">
           <div class="stat-number">{{ systemStats()?.totalAuditLogs }}</div>
-          <div class="stat-label">Audit Log Mutations</div>
+          <div class="stat-label">Audit Mutations Logged</div>
         </div>
       </div>
 
       <div class="admin-card tech-card">
-        <h3>Runtime Telemetry</h3>
-        <p><strong>Framework:</strong> {{ systemStats()?.frameworkVersion }}</p>
-        <p><strong>Database:</strong> {{ systemStats()?.databaseEngine }}</p>
-        <p><strong>Server Time (UTC):</strong> {{ systemStats()?.serverTimeUtc | date:'medium' }}</p>
+        <h3>Runtime Engine & Architecture Telemetry</h3>
+        <div class="telemetry-rows">
+          <p><strong>Framework:</strong> {{ systemStats()?.frameworkVersion }}</p>
+          <p><strong>Database:</strong> {{ systemStats()?.databaseEngine }}</p>
+          <p><strong>Server Time (UTC):</strong> {{ systemStats()?.serverTimeUtc | date:'medium' }}</p>
+          <p><strong>Real-Time Presence Engine:</strong> SignalR TaskHub WebSockets + UserActivityMiddleware</p>
+          <p><strong>Audit Engine:</strong> Immutable Ledger with Structured JSON Snapshot Diffs</p>
+        </div>
       </div>
     }
+
   }
 </div>
 
+<!-- FIELD-LEVEL VISUAL DIFF INSPECTION MODAL -->
 @if (selectedAuditLog()) {
   <div class="modal-backdrop" (click)="selectedAuditLog.set(null)">
-    <div class="modal-dialog" (click)="$event.stopPropagation()">
+    <div class="modal-dialog modal-lg" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>Audit Log Inspection: {{ selectedAuditLog()?.action }}</h3>
+        <div class="modal-title-group">
+          <span class="badge" [ngClass]="getActionBadgeClass(selectedAuditLog()!.action)">
+            {{ selectedAuditLog()?.action }}
+          </span>
+          <h3>Audit Log Details: {{ selectedAuditLog()?.module || selectedAuditLog()?.entityName }} #{{ selectedAuditLog()?.entityId }}</h3>
+        </div>
         <button class="close-btn" (click)="selectedAuditLog.set(null)">✕</button>
       </div>
+
       <div class="modal-body">
-        <div class="diff-view">
-          <div>
-            <h4>Previous State (Old Value)</h4>
-            <pre>{{ selectedAuditLog()?.oldValueJson || 'null' }}</pre>
+        <!-- Metadata Pill Bar -->
+        <div class="audit-meta-summary">
+          <div class="meta-item">
+            <span class="meta-lbl">Performed By:</span>
+            <strong>{{ selectedAuditLog()?.userName || 'System' }} ({{ selectedAuditLog()?.userRole || 'Auth' }})</strong>
           </div>
-          <div>
-            <h4>Updated State (New Value)</h4>
-            <pre>{{ selectedAuditLog()?.newValueJson || 'null' }}</pre>
+          <div class="meta-item">
+            <span class="meta-lbl">Timestamp:</span>
+            <strong>{{ selectedAuditLog()?.timestamp | date:'dd-MMM-yyyy, hh:mm:ss a' }} UTC</strong>
+          </div>
+          <div class="meta-item">
+            <span class="meta-lbl">Client IP:</span>
+            <code>{{ selectedAuditLog()?.ipAddress || '127.0.0.1' }}</code>
+          </div>
+          <div class="meta-item">
+            <span class="meta-lbl">Description:</span>
+            <span>{{ selectedAuditLog()?.description }}</span>
           </div>
         </div>
+
+        <!-- Field By Field Comparison -->
+        <h4 class="section-title">
+          <i class="fa-solid fa-code-compare"></i> Field-Level Before & After Comparison
+        </h4>
+
+        <div class="diff-table-wrap">
+          <table class="diff-table">
+            <thead>
+              <tr>
+                <th style="width: 25%">Field Name</th>
+                <th style="width: 37%">Previous Value (Old)</th>
+                <th style="width: 38%">Updated Value (New)</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (field of parsedFieldDiffs(); track field.fieldName) {
+                <tr [class.field-modified]="field.isModified">
+                  <td>
+                    <strong class="field-name-badge">{{ field.fieldName }}</strong>
+                  </td>
+                  <td class="old-val-cell">
+                    <div class="val-content">{{ field.oldValue }}</div>
+                  </td>
+                  <td class="new-val-cell">
+                    <div class="val-content">{{ field.newValue }}</div>
+                    <span class="changed-pill" *ngIf="field.isModified">Changed</span>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="3" class="empty-cell">No field modifications captured for this event.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Raw JSON Preview Accordion -->
+        <details class="raw-json-details">
+          <summary>View Raw JSON Payloads</summary>
+          <div class="raw-json-grid">
+            <div>
+              <h5>Old Value JSON</h5>
+              <pre>{{ selectedAuditLog()?.oldValueJson || 'null' }}</pre>
+            </div>
+            <div>
+              <h5>New Value JSON</h5>
+              <pre>{{ selectedAuditLog()?.newValueJson || 'null' }}</pre>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   </div>
 }
+

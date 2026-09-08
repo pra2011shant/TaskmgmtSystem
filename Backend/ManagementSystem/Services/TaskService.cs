@@ -190,7 +190,19 @@ namespace ManagementSystem.Services
                 }
 
                 var user = await _context.Users.FindAsync(currentUserId);
-                await _auditService.LogAsync("TaskCreated", "Task", task.Id.ToString(), null, new { task.Title, task.Priority, task.Status, task.AssignedToUserId }, currentUserId, user?.FullName, role, ipAddress);
+                await _auditService.LogAsync(
+                    action: "CREATE",
+                    entityName: "Task",
+                    entityId: task.Id.ToString(),
+                    oldValue: null,
+                    newValue: new { task.Title, Status = task.Status.ToString(), Priority = task.Priority.ToString(), task.Category, task.AssignedToUserId, task.EstimatedHours, task.DueDate },
+                    userId: currentUserId,
+                    userName: user?.FullName,
+                    userRole: role,
+                    ipAddress: ipAddress,
+                    module: "Task",
+                    description: $"Task #{task.Id} created: \"{task.Title}\""
+                );
 
                 var loadedTask = await GetTaskByIdAsync(task.Id, currentUserId, role);
                 return (true, "Task created successfully.", loadedTask);
@@ -214,7 +226,21 @@ namespace ManagementSystem.Services
                     return (false, "Task not found or access denied.", null);
                 }
 
-                var oldState = new { task.Title, task.Status, task.Priority, task.AssignedToUserId, task.DueDate };
+                var oldState = new
+                {
+                    task.Title,
+                    task.Description,
+                    Status = task.Status.ToString(),
+                    Priority = task.Priority.ToString(),
+                    task.Category,
+                    task.Tags,
+                    task.EstimatedHours,
+                    task.ActualHours,
+                    task.DueDate,
+                    task.TeamId,
+                    task.AssignedToUserId,
+                    task.Remarks
+                };
                 var previousAssignee = task.AssignedToUserId;
 
                 task.Title = dto.Title.Trim();
@@ -247,8 +273,35 @@ namespace ManagementSystem.Services
                 }
 
                 var user = await _context.Users.FindAsync(currentUserId);
-                var newState = new { task.Title, task.Status, task.Priority, task.AssignedToUserId, task.DueDate };
-                await _auditService.LogAsync("TaskUpdated", "Task", task.Id.ToString(), oldState, newState, currentUserId, user?.FullName, role, ipAddress);
+                var newState = new
+                {
+                    task.Title,
+                    task.Description,
+                    Status = task.Status.ToString(),
+                    Priority = task.Priority.ToString(),
+                    task.Category,
+                    task.Tags,
+                    task.EstimatedHours,
+                    task.ActualHours,
+                    task.DueDate,
+                    task.TeamId,
+                    task.AssignedToUserId,
+                    task.Remarks
+                };
+
+                await _auditService.LogAsync(
+                    action: "UPDATE",
+                    entityName: "Task",
+                    entityId: task.Id.ToString(),
+                    oldValue: oldState,
+                    newValue: newState,
+                    userId: currentUserId,
+                    userName: user?.FullName,
+                    userRole: role,
+                    ipAddress: ipAddress,
+                    module: "Task",
+                    description: $"Task #{task.Id} updated by {user?.FullName ?? "User"}"
+                );
 
                 var loadedTask = await GetTaskByIdAsync(task.Id, currentUserId, role);
                 return (true, "Task updated successfully.", loadedTask);
@@ -293,7 +346,19 @@ namespace ManagementSystem.Services
                     );
                 }
 
-                await _auditService.LogAsync("TaskStatusChanged", "Task", task.Id.ToString(), new { Status = oldStatus }, new { Status = newStatus }, currentUserId, actor?.FullName, role, ipAddress);
+                await _auditService.LogAsync(
+                    action: "STATUS_CHANGE",
+                    entityName: "Task",
+                    entityId: task.Id.ToString(),
+                    oldValue: new { Status = oldStatus.ToString() },
+                    newValue: new { Status = newStatus.ToString() },
+                    userId: currentUserId,
+                    userName: actor?.FullName,
+                    userRole: role,
+                    ipAddress: ipAddress,
+                    module: "Task",
+                    description: $"Task #{task.Id} status shifted: {oldStatus} → {newStatus}"
+                );
 
                 var loadedTask = await GetTaskByIdAsync(task.Id, currentUserId, role);
                 return (true, "Status updated successfully.", loadedTask);
@@ -317,12 +382,35 @@ namespace ManagementSystem.Services
                     return (false, "Task not found or unauthorized to delete.");
                 }
 
+                var taskSnapshot = new
+                {
+                    task.Id,
+                    task.Title,
+                    Status = task.Status.ToString(),
+                    Priority = task.Priority.ToString(),
+                    task.AssignedToUserId,
+                    task.TeamId,
+                    task.CreatedDate
+                };
+
                 task.IsDeleted = true;
                 task.LastUpdatedDate = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
 
                 var actor = await _context.Users.FindAsync(currentUserId);
-                await _auditService.LogAsync("TaskDeleted", "Task", id.ToString(), new { task.Title }, null, currentUserId, actor?.FullName, role, ipAddress);
+                await _auditService.LogAsync(
+                    action: "DELETE",
+                    entityName: "Task",
+                    entityId: id.ToString(),
+                    oldValue: taskSnapshot,
+                    newValue: null,
+                    userId: currentUserId,
+                    userName: actor?.FullName,
+                    userRole: role,
+                    ipAddress: ipAddress,
+                    module: "Task",
+                    description: $"Task #{id} \"{task.Title}\" soft-deleted by {actor?.FullName ?? "User"}"
+                );
 
                 return (true, "Task deleted successfully.");
             }

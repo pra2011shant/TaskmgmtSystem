@@ -55,6 +55,12 @@ BEGIN
         Department NVARCHAR(100) NULL,
         FailedLoginAttempts INT NOT NULL DEFAULT 0,
         LockoutEnd DATETIME2 NULL,
+        IsOnline BIT NOT NULL DEFAULT 0,
+        LastLoginDate DATETIME2 NULL,
+        LastActivityDate DATETIME2 NULL,
+        LastLogoutDate DATETIME2 NULL,
+        LastIpAddress NVARCHAR(50) NULL,
+        LastUserAgent NVARCHAR(255) NULL,
         Remarks NVARCHAR(500) NULL,
         Status INT NOT NULL DEFAULT 1,
         IsDeleted BIT NOT NULL DEFAULT 0,
@@ -317,17 +323,35 @@ BEGIN
         UserName NVARCHAR(100) NULL,
         UserRole NVARCHAR(50) NULL,
         Action NVARCHAR(100) NOT NULL,
+        Module NVARCHAR(100) NULL,
         EntityName NVARCHAR(100) NOT NULL,
         EntityId NVARCHAR(100) NULL,
+        Description NVARCHAR(500) NULL,
         OldValueJson NVARCHAR(MAX) NULL,
         NewValueJson NVARCHAR(MAX) NULL,
         IpAddress NVARCHAR(50) NULL,
+        UserAgent NVARCHAR(255) NULL,
         Timestamp DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
     );
 END
 GO
 
--- 17. Refresh Tokens (JWT Rotation Security)
+-- 17. Task Views (Seen / Read Compliance Tracking)
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'TaskViews')
+BEGIN
+    CREATE TABLE TaskViews (
+        Id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        TaskId INT NOT NULL FOREIGN KEY REFERENCES Tasks(Id) ON DELETE CASCADE,
+        UserId INT NOT NULL FOREIGN KEY REFERENCES Users(Id) ON DELETE CASCADE,
+        UserName NVARCHAR(100) NULL,
+        UserRole NVARCHAR(50) NULL,
+        IpAddress NVARCHAR(50) NULL,
+        ViewedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+    );
+END
+GO
+
+-- 18. Refresh Tokens (JWT Rotation Security)
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RefreshTokens')
 BEGIN
     CREATE TABLE RefreshTokens (
@@ -346,7 +370,7 @@ BEGIN
 END
 GO
 
--- 18. Role Permissions (Granular Policy Matrix)
+-- 19. Role Permissions (Granular Policy Matrix)
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RolePermissions')
 BEGIN
     CREATE TABLE RolePermissions (
@@ -523,6 +547,76 @@ BEGIN
     SELECT @@ROWCOUNT AS UpdatedCount;
 END;
 GO
+
+CREATE OR ALTER PROCEDURE sp_GetSystemActivityStats
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @TodayUtc DATETIME2 = CAST(SYSUTCDATETIME() AS DATE);
+
+    SELECT 
+        (SELECT COUNT(1) FROM Users WITH (NOLOCK) WHERE IsDeleted = 0 AND (IsOnline = 1 OR (LastActivityDate IS NOT NULL AND LastActivityDate >= DATEADD(minute, -15, SYSUTCDATETIME())))) AS ActiveUsers,
+        (SELECT COUNT(1) FROM AuditLogs WITH (NOLOCK) WHERE Action = 'LOGIN' AND Timestamp >= @TodayUtc) AS TodayLogins,
+        (SELECT COUNT(1) FROM AuditLogs WITH (NOLOCK) WHERE EntityName = 'Task' AND (Action = 'UPDATE' OR Action = 'STATUS_CHANGE') AND Timestamp >= @TodayUtc) AS TasksUpdatedToday,
+        (SELECT COUNT(1) FROM AuditLogs WITH (NOLOCK) WHERE Action = 'DELETE' AND Timestamp >= @TodayUtc) AS DeletionsToday,
+        (SELECT COUNT(1) FROM AuditLogs WITH (NOLOCK)) AS TotalAuditLogs;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_GetUserPresenceList
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        u.Id,
+        u.FullName,
+        u.Email,
+        CASE u.Role WHEN 1 THEN 'Admin' WHEN 2 THEN 'Manager' ELSE 'User' END AS Role,
+        u.Department,
+        CASE 
+            WHEN u.IsOnline = 1 OR (u.LastActivityDate IS NOT NULL AND u.LastActivityDate >= DATEADD(minute, -15, SYSUTCDATETIME())) 
+            THEN CAST(1 AS BIT) 
+            ELSE CAST(0 AS BIT) 
+        END AS IsOnline,
+        u.LastLoginDate AS LoginTime,
+        ISNULL(u.LastActivityDate, u.LastLoginDate) AS LastActivity,
+        u.LastLogoutDate AS LastLogout,
+        ISNULL(u.LastIpAddress, '127.0.0.1') AS LastIpAddress,
+        ISNULL(u.LastUserAgent, 'Mozilla/5.0') AS LastUserAgent
+    FROM Users u WITH (NOLOCK)
+    WHERE u.IsDeleted = 0
+    ORDER BY IsOnline DESC, u.FullName ASC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_RecordTaskView
+    @TaskId INT,
+    @UserId INT,
+    @UserName NVARCHAR(100) = NULL,
+    @UserRole NVARCHAR(50) = NULL,
+    @IpAddress NVARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS (SELECT 1 FROM TaskViews WHERE TaskId = @TaskId AND UserId = @UserId)
+    BEGIN
+        UPDATE TaskViews
+        SET ViewedAt = SYSUTCDATETIME(),
+            IpAddress = @IpAddress,
+            UserName = ISNULL(@UserName, UserName),
+            UserRole = ISNULL(@UserRole, UserRole)
+        WHERE TaskId = @TaskId AND UserId = @UserId;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO TaskViews (TaskId, UserId, UserName, UserRole, IpAddress, ViewedAt)
+        VALUES (@TaskId, @UserId, @UserName, @UserRole, @IpAddress, SYSUTCDATETIME());
+    END
+END;
+GO
+
 
 -- ==============================================================================================
 -- PART 4: COMPLETE ENTERPRISE DUMMY DATASET

@@ -25,6 +25,9 @@ namespace ManagementSystem.Models
         [MaxLength(100)]
         public string Action { get; set; } = string.Empty;
 
+        [MaxLength(100)]
+        public string? Module { get; set; }
+
         [Required]
         [MaxLength(100)]
         public string EntityName { get; set; } = string.Empty;
@@ -32,12 +35,18 @@ namespace ManagementSystem.Models
         [MaxLength(100)]
         public string? EntityId { get; set; }
 
+        [MaxLength(500)]
+        public string? Description { get; set; }
+
         public string? OldValueJson { get; set; }
 
         public string? NewValueJson { get; set; }
 
         [MaxLength(50)]
         public string? IpAddress { get; set; }
+
+        [MaxLength(255)]
+        public string? UserAgent { get; set; }
 
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     }

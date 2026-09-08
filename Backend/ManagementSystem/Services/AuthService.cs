@@ -181,9 +181,16 @@ namespace ManagementSystem.Services
                     return (false, "Invalid email or password.", null);
                 }
 
-                // Reset failed attempts upon successful login
+                // Reset failed attempts upon successful login and update user presence
                 user.FailedLoginAttempts = 0;
                 user.LockoutEnd = null;
+                user.IsOnline = true;
+                user.LastLoginDate = DateTime.UtcNow;
+                user.LastActivityDate = DateTime.UtcNow;
+                if (!string.IsNullOrEmpty(ipAddress))
+                {
+                    user.LastIpAddress = ipAddress;
+                }
                 user.LastUpdatedDate = DateTime.UtcNow;
 
                 var permissions = await GetUserPermissionsAsync(user.Role);
@@ -201,7 +208,7 @@ namespace ManagementSystem.Services
                 _context.RefreshTokens.Add(rtEntity);
                 await _context.SaveChangesAsync();
 
-                await _auditService.LogAsync("UserLogin", "User", user.Id.ToString(), null, new { user.Email, user.Role }, user.Id, user.FullName, user.Role.ToString(), ipAddress);
+                await _auditService.LogAsync("LOGIN", "Authentication", user.Id.ToString(), null, new { user.Email, user.Role, LoginAt = DateTime.UtcNow }, user.Id, user.FullName, user.Role.ToString(), ipAddress, module: "Authentication", description: $"{user.FullName} ({user.Role}) logged into the system.");
 
                 var response = new AuthResponseDto
                 {
@@ -285,6 +292,15 @@ namespace ManagementSystem.Services
                     {
                         token.IsRevoked = true;
                         token.LastUpdatedDate = DateTime.UtcNow;
+
+                        var user = await _context.Users.FindAsync(token.UserId);
+                        if (user != null)
+                        {
+                            user.IsOnline = false;
+                            user.LastLogoutDate = DateTime.UtcNow;
+                            user.LastUpdatedDate = DateTime.UtcNow;
+                            await _auditService.LogAsync("LOGOUT", "Authentication", user.Id.ToString(), null, new { user.Email, LogoutAt = DateTime.UtcNow }, user.Id, user.FullName, user.Role.ToString(), null, module: "Authentication", description: $"{user.FullName} logged out of the system.");
+                        }
                     }
                 }
                 else if (userId.HasValue)
@@ -297,6 +313,15 @@ namespace ManagementSystem.Services
                     {
                         tok.IsRevoked = true;
                         tok.LastUpdatedDate = DateTime.UtcNow;
+                    }
+
+                    var user = await _context.Users.FindAsync(userId.Value);
+                    if (user != null)
+                    {
+                        user.IsOnline = false;
+                        user.LastLogoutDate = DateTime.UtcNow;
+                        user.LastUpdatedDate = DateTime.UtcNow;
+                        await _auditService.LogAsync("LOGOUT", "Authentication", user.Id.ToString(), null, new { user.Email, LogoutAt = DateTime.UtcNow }, user.Id, user.FullName, user.Role.ToString(), null, module: "Authentication", description: $"{user.FullName} logged out of the system.");
                     }
                 }
 

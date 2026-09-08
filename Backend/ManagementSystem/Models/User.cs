@@ -42,6 +42,20 @@ namespace ManagementSystem.Models
 
         public DateTime? LockoutEnd { get; set; }
 
+        public DateTime? LastLoginDate { get; set; }
+
+        public DateTime? LastActivityDate { get; set; }
+
+        public DateTime? LastLogoutDate { get; set; }
+
+        [MaxLength(50)]
+        public string? LastIpAddress { get; set; }
+
+        [MaxLength(255)]
+        public string? LastUserAgent { get; set; }
+
+        public bool IsOnline { get; set; } = false;
+
         [NotMapped]
         public bool IsLockedOut => LockoutEnd.HasValue && LockoutEnd.Value > DateTime.UtcNow;
 

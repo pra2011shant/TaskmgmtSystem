@@ -228,6 +228,7 @@ app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<UserActivityMiddleware>();
 
 app.MapControllers();
 app.MapHub<ManagementSystem.Hubs.TaskHub>("/hubs/tasks");
