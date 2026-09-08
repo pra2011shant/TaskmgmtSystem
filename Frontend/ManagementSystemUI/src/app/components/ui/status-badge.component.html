@@ -1,0 +1,4 @@
+<span class="badge" [ngClass]="[computedClass, sizeClass]">
+  <i *ngIf="showIcon && computedIcon" [class]="computedIcon"></i>
+  <span>{{ label || text }}</span>
+</span>

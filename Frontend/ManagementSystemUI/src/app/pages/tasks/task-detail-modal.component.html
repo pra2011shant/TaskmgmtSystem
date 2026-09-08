@@ -1,0 +1,169 @@
+<div class="modal-overlay" (click)="close()">
+  <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="task-title-group">
+        <app-status-badge type="status" [value]="task.status"></app-status-badge>
+        <h3 class="task-modal-title">{{ task.title }}</h3>
+      </div>
+      <button class="btn-icon" (click)="close()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Quick Status Buttons (For all roles) -->
+      <div class="quick-status-bar">
+        <span class="status-bar-label">Quick Update Status:</span>
+        <div class="status-btn-group">
+          <button 
+            type="button" 
+            class="btn-status" 
+            [class.active]="task.status === 'ToDo'"
+            (click)="changeStatus(1)"
+          >
+            <i class="fa-solid fa-circle-dot"></i> To Do
+          </button>
+          <button 
+            type="button" 
+            class="btn-status" 
+            [class.active]="task.status === 'InProgress'"
+            (click)="changeStatus(2)"
+          >
+            <i class="fa-solid fa-spinner"></i> In Progress
+          </button>
+          <button 
+            type="button" 
+            class="btn-status" 
+            [class.active]="task.status === 'Done'"
+            (click)="changeStatus(3)"
+          >
+            <i class="fa-solid fa-circle-check"></i> Done
+          </button>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="detail-section">
+        <label class="section-label">Description</label>
+        <p class="description-text">{{ task.description || 'No description provided.' }}</p>
+      </div>
+
+      <!-- Metadata Grid -->
+      <div class="meta-grid">
+        <div class="meta-card">
+          <span class="meta-label">Priority</span>
+          <app-status-badge type="priority" [value]="task.priority"></app-status-badge>
+        </div>
+
+        <div class="meta-card">
+          <span class="meta-label">Assignee</span>
+          <div class="assignee-val">
+            <div class="avatar-xs">{{ (task.assignedToUserName || '?').charAt(0) }}</div>
+            <span>{{ task.assignedToUserName || 'Unassigned' }}</span>
+          </div>
+        </div>
+
+        <div class="meta-card">
+          <span class="meta-label">Team</span>
+          <span class="meta-val">{{ task.teamName || 'General' }}</span>
+        </div>
+
+        <div class="meta-card">
+          <span class="meta-label">Due Date</span>
+          <span class="meta-val" [class.text-danger]="isOverdue(task.dueDate, task.status)">
+            {{ task.dueDate ? (task.dueDate | date:'mediumDate') : 'No deadline' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- System Audit & Tracking Columns (ADMIN ONLY) -->
+      <div class="admin-audit-box" *ngIf="authService.isAdmin()">
+        <div class="audit-box-header">
+          <div class="audit-header-left">
+            <i class="fa-solid fa-shield-halved text-primary"></i>
+            <span class="audit-box-title">System Audit & Tracking (Admin Only)</span>
+          </div>
+          <span class="audit-restricted-pill">Privileged View</span>
+        </div>
+        <div class="audit-fields-grid">
+          <div class="audit-field">
+            <span class="audit-label">Remarks:</span>
+            <span class="audit-val">{{ task.remarks || 'None' }}</span>
+          </div>
+          <div class="audit-field">
+            <span class="audit-label">Workflow Status:</span>
+            <span class="audit-val">{{ task.status }}</span>
+          </div>
+          <div class="audit-field">
+            <span class="audit-label">Soft Delete (IsDeleted):</span>
+            <span class="audit-val">{{ task.isDeleted ? '1 (Deleted)' : '0 (Active)' }}</span>
+          </div>
+          <div class="audit-field">
+            <span class="audit-label">Created Date (UTC):</span>
+            <span class="audit-val">{{ (task.createdDate || task.createdAt) | date:'medium' }}</span>
+          </div>
+          <div class="audit-field">
+            <span class="audit-label">Last Updated Date:</span>
+            <span class="audit-val">{{ task.lastUpdatedDate ? (task.lastUpdatedDate | date:'medium') : 'Not modified' }}</span>
+          </div>
+          <div class="audit-field">
+            <span class="audit-label">Created By ID:</span>
+            <span class="audit-val">{{ task.createdByUserName || ('User #' + (task.createdById || 1)) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comments / Discussion Collaboration Thread -->
+      <div class="comments-section">
+        <div class="comments-header">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-comments text-primary"></i>
+            <h4 style="margin: 0; font-size: 0.9375rem; font-weight: 700;">Collaboration & Comments ({{ comments().length }})</h4>
+          </div>
+        </div>
+
+        <!-- Comment List -->
+        <div class="comment-list">
+          <div *ngFor="let c of comments()" class="comment-item">
+            <div class="comment-avatar">
+              {{ c.userName.charAt(0) }}
+            </div>
+            <div class="comment-bubble">
+              <div class="comment-bubble-header">
+                <span class="comment-author">{{ c.userName }}</span>
+                <span class="badge badge-role" [ngClass]="'badge-role-' + (c.userRole | lowercase)">{{ c.userRole }}</span>
+                <span class="comment-time">{{ c.createdAt | date:'short' }}</span>
+              </div>
+              <p class="comment-content">{{ c.content }}</p>
+            </div>
+          </div>
+
+          <div *ngIf="comments().length === 0" class="no-comments">
+            <p>No comments yet. Start the conversation!</p>
+          </div>
+        </div>
+
+        <!-- Add Comment Box -->
+        <form (ngSubmit)="postComment()" class="add-comment-form">
+          <div class="comment-input-wrap">
+            <input 
+              type="text" 
+              class="form-control" 
+              [(ngModel)]="newComment" 
+              name="newComment" 
+              placeholder="Write a comment or update on this task..."
+              required
+            />
+            <button type="submit" class="btn btn-primary btn-sm" [disabled]="submittingComment() || !newComment.trim()">
+              <i class="fa-solid fa-paper-plane"></i>
+              <span>Send</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="close()">Close</button>
+    </div>
+  </div>
+</div>

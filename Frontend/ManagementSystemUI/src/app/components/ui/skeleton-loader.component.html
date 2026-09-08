@@ -1,0 +1,43 @@
+<div class="skeleton-wrapper" [ngClass]="type">
+  <ng-container [ngSwitch]="type">
+    <!-- Stat Cards Skeleton -->
+    <div *ngSwitchCase="'stats'" class="skeleton-stats-grid">
+      <div *ngFor="let item of getArray(count || 4)" class="skeleton-card skeleton-stat-card">
+        <div class="skeleton-row">
+          <div class="skeleton-circle shimmer"></div>
+          <div class="skeleton-pill shimmer"></div>
+        </div>
+        <div class="skeleton-line shimmer large"></div>
+        <div class="skeleton-line shimmer small"></div>
+      </div>
+    </div>
+
+    <!-- Table Skeleton -->
+    <div *ngSwitchCase="'table'" class="skeleton-table">
+      <div class="skeleton-table-header shimmer"></div>
+      <div *ngFor="let item of getArray(count || 5)" class="skeleton-table-row">
+        <div class="skeleton-line shimmer width-30"></div>
+        <div class="skeleton-line shimmer width-20"></div>
+        <div class="skeleton-line shimmer width-20"></div>
+        <div class="skeleton-line shimmer width-15"></div>
+      </div>
+    </div>
+
+    <!-- Kanban Skeleton -->
+    <div *ngSwitchCase="'kanban'" class="skeleton-kanban-grid">
+      <div *ngFor="let col of getArray(4)" class="skeleton-kanban-col">
+        <div class="skeleton-line shimmer width-40"></div>
+        <div *ngFor="let card of getArray(3)" class="skeleton-card shimmer kanban-card"></div>
+      </div>
+    </div>
+
+    <!-- Generic Cards Skeleton -->
+    <div *ngSwitchDefault class="skeleton-generic-grid">
+      <div *ngFor="let item of getArray(count || 3)" class="skeleton-card">
+        <div class="skeleton-line shimmer width-60"></div>
+        <div class="skeleton-line shimmer width-80"></div>
+        <div class="skeleton-line shimmer width-40"></div>
+      </div>
+    </div>
+  </ng-container>
+</div>

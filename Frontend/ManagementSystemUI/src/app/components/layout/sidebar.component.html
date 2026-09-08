@@ -1,0 +1,75 @@
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">
+      <i class="fa-solid fa-layer-group"></i>
+    </div>
+    <div class="brand-text">
+      <h2>WorkFlow<span>Pro</span></h2>
+      <span class="badge badge-role" [ngClass]="'badge-role-' + (authService.userRole() | lowercase)">
+        {{ authService.userRole() }}
+      </span>
+    </div>
+  </div>
+
+  <div class="sidebar-nav">
+    <div class="nav-section-title">MAIN MENU</div>
+    
+    <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+      <i class="fa-solid fa-chart-pie"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <a routerLink="/tasks" routerLinkActive="active" class="nav-item">
+      <i class="fa-solid fa-list-check"></i>
+      <span>Tasks & Kanban</span>
+    </a>
+
+    <a routerLink="/schedule" routerLinkActive="active" class="nav-item">
+      <i class="fa-solid fa-calendar-days"></i>
+      <span>Schedule & Dates</span>
+    </a>
+
+    <a routerLink="/teams" routerLinkActive="active" class="nav-item">
+      <i class="fa-solid fa-users-rectangle"></i>
+      <span>Teams</span>
+    </a>
+
+    <a routerLink="/notifications" routerLinkActive="active" class="nav-item">
+      <i class="fa-solid fa-bell"></i>
+      <span>Notifications</span>
+      <span class="count-badge" *ngIf="notificationService.unreadCount() > 0">
+        {{ notificationService.unreadCount() }}
+      </span>
+    </a>
+
+    <div class="nav-section-title" *ngIf="authService.isAdmin()">ADMIN TOOLS</div>
+    <a routerLink="/users" routerLinkActive="active" class="nav-item" *ngIf="authService.isAdmin()">
+      <i class="fa-solid fa-users-gear"></i>
+      <span>User Directory</span>
+    </a>
+    <a routerLink="/register-user" routerLinkActive="active" class="nav-item" *ngIf="authService.isAdmin()">
+      <i class="fa-solid fa-user-plus"></i>
+      <span>Register User</span>
+    </a>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-profile-preview" *ngIf="authService.currentUser() as user">
+      <div class="avatar">
+        {{ user.fullName.charAt(0) }}
+      </div>
+      <div class="user-info">
+        <h4>{{ user.fullName }}</h4>
+        <p>{{ user.email }}</p>
+      </div>
+    </div>
+    <div class="system-status-indicator">
+      <span class="status-dot"></span>
+      <span>API Connected & Online</span>
+    </div>
+    <button class="logout-btn" (click)="authService.logout()" title="Logout">
+      <i class="fa-solid fa-right-from-bracket"></i>
+      <span>Logout</span>
+    </button>
+  </div>
+</aside>

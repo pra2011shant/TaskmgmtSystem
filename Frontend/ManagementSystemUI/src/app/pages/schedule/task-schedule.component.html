@@ -1,0 +1,261 @@
+<div class="schedule-page">
+  <!-- Role-Based Calendar Scope Banner -->
+  <div class="role-scope-banner" [ngClass]="'scope-' + (authService.userRole() | lowercase)">
+    <div class="scope-icon-wrap">
+      <i *ngIf="authService.isAdmin()" class="fa-solid fa-shield-halved"></i>
+      <i *ngIf="authService.isManager() && !authService.isAdmin()" class="fa-solid fa-user-tie"></i>
+      <i *ngIf="!authService.isManager()" class="fa-solid fa-user-check"></i>
+    </div>
+    <div class="scope-text-wrap">
+      <div class="scope-title-row">
+        <strong *ngIf="authService.isAdmin()">Enterprise Admin Calendar Scope</strong>
+        <strong *ngIf="authService.isManager() && !authService.isAdmin()">Team Manager Calendar Scope</strong>
+        <strong *ngIf="!authService.isManager()">Personal Member Deliverables Scope</strong>
+        <span class="scope-pill-tag">{{ authService.userRole() }}</span>
+      </div>
+      <p *ngIf="authService.isAdmin()">
+        Viewing all scheduled deliverables across all departments, teams, and employees.
+      </p>
+      <p *ngIf="authService.isManager() && !authService.isAdmin()">
+        Viewing scheduled deliverables strictly for your managed teams and supervised team members.
+      </p>
+      <p *ngIf="!authService.isManager()">
+        Viewing only your personal assigned deliverables and deadlines ({{ authService.currentUser()?.fullName }}).
+      </p>
+    </div>
+  </div>
+
+  <!-- Hero Header & Global Date Controls -->
+  <div class="schedule-hero card">
+    <div class="hero-left">
+      <div class="hero-tag">
+        <i class="fa-solid fa-calendar-check"></i>
+        <span>Interactive Timeline & Calendar</span>
+      </div>
+      <h2 class="hero-title">Assignment Schedule</h2>
+      <p class="hero-desc">
+        Organize and monitor deliverables date-wise. Click on days to inspect tasks and filter by assignees.
+      </p>
+    </div>
+
+    <div class="hero-controls">
+      <div class="stepper-glass">
+        <button class="step-btn" (click)="stepDate(-1)" title="Previous Day">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <div class="picker-box">
+          <i class="fa-regular fa-calendar-days text-primary"></i>
+          <input 
+            type="date" 
+            class="stepper-input" 
+            [ngModel]="selectedDateString()" 
+            (ngModelChange)="onDateInputChange($event)"
+          />
+        </div>
+        <button class="step-btn" (click)="stepDate(1)" title="Next Day">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+
+      <button class="btn btn-primary btn-sm today-btn" (click)="selectToday()">
+        <i class="fa-solid fa-clock-rotate-left"></i> Today
+      </button>
+    </div>
+  </div>
+
+  <!-- 7-Day Interactive Week Strip (Calendar View) -->
+  <div class="week-strip-card card">
+    <div class="week-header">
+      <div class="month-title">
+        <i class="fa-regular fa-calendar text-primary"></i>
+        <span>{{ formatMonthYear(selectedDate()) }}</span>
+      </div>
+      <div class="week-nav">
+        <button class="week-nav-btn" (click)="stepWeek(-1)" title="Previous Week">
+          <i class="fa-solid fa-arrow-left"></i> Prev Week
+        </button>
+        <button class="week-nav-btn" (click)="stepWeek(1)" title="Next Week">
+          Next Week <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="week-days-grid">
+      <div 
+        *ngFor="let day of currentWeekDays()" 
+        class="week-day-cell" 
+        [class.active]="day.isSelected"
+        [class.is-today]="day.isToday"
+        (click)="setDate(day.dateString)"
+      >
+        <span class="cell-day-name">{{ day.dayName }}</span>
+        <span class="cell-day-number">{{ day.dayNumber }}</span>
+        <div class="cell-footer">
+          <span *ngIf="day.taskCount > 0" class="task-indicator-dot" [title]="day.taskCount + ' tasks'">
+            {{ day.taskCount }}
+          </span>
+          <span *ngIf="day.taskCount === 0" class="empty-dot"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Dates Quick Ribbon -->
+  <div class="quick-dates-bar card" *ngIf="availableTaskDates().length > 0">
+    <div class="ribbon-label">
+      <i class="fa-solid fa-bolt text-warning"></i>
+      <span>Active Task Dates:</span>
+    </div>
+    <div class="quick-chips-scroll">
+      <button 
+        *ngFor="let dateStr of availableTaskDates()" 
+        class="date-chip" 
+        [class.active]="dateStr === selectedDateString()"
+        (click)="setDate(dateStr)"
+      >
+        <span>{{ formatChipDate(dateStr) }}</span>
+        <span class="chip-count">{{ getTaskCountForDate(dateStr) }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Selected Day Overview & Assignee Filter Bar -->
+  <div class="day-overview-card card">
+    <div class="overview-left">
+      <div class="date-badge-box">
+        <span class="badge-weekday">{{ getDayOfWeek(selectedDate()) }}</span>
+        <span class="badge-date">{{ formatLongDate(selectedDate()) }}</span>
+      </div>
+      <div class="day-count-tag">
+        <i class="fa-solid fa-list-check"></i>
+        <span>{{ tasksForSelectedDate().length }} Deliverable{{ tasksForSelectedDate().length === 1 ? '' : 's' }}</span>
+      </div>
+    </div>
+
+    <!-- Assignee Dropdown Filter (Visible only for Managers & Admins) -->
+    <div class="overview-right" *ngIf="tasksForSelectedDate().length > 0 && authService.isManager()">
+      <div class="assignee-select-wrap">
+        <i class="fa-solid fa-user-filter text-primary"></i>
+        <select 
+          class="form-select assignee-dropdown" 
+          [(ngModel)]="selectedAssigneeId"
+          (ngModelChange)="applyAssigneeFilter()"
+        >
+          <option [ngValue]="null">All Managed Members ({{ tasksForSelectedDate().length }} tasks)</option>
+          <option *ngFor="let assignee of assigneesOnSelectedDate()" [ngValue]="assignee.userId">
+            {{ assignee.userName }} ({{ assignee.count }} {{ assignee.count === 1 ? 'task' : 'tasks' }})
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Personal Deliverables Tag for Standard Users -->
+    <div class="overview-right" *ngIf="!authService.isManager()">
+      <span class="user-scope-indicator">
+        <i class="fa-solid fa-user-check"></i> Your Personal Deliverables
+      </span>
+    </div>
+  </div>
+
+  <!-- Assignee Quick Filter Pills (Manager & Admin only) -->
+  <div class="assignee-pills-wrap" *ngIf="authService.isManager() && assigneesOnSelectedDate().length > 1">
+    <span class="pills-legend">Filter by Team Member:</span>
+    <div class="pills-list">
+      <button 
+        type="button" 
+        class="filter-pill" 
+        [class.active]="selectedAssigneeId === null"
+        (click)="selectedAssigneeId = null; applyAssigneeFilter()"
+      >
+        <span>All Members</span>
+        <span class="pill-cnt">{{ tasksForSelectedDate().length }}</span>
+      </button>
+      <button 
+        type="button" 
+        *ngFor="let u of assigneesOnSelectedDate()" 
+        class="filter-pill" 
+        [class.active]="selectedAssigneeId === u.userId"
+        (click)="selectedAssigneeId = u.userId; applyAssigneeFilter()"
+      >
+        <span class="avatar-circle">{{ u.userName.charAt(0) }}</span>
+        <span>{{ u.userName }}</span>
+        <span class="pill-cnt">{{ u.count }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <app-skeleton-loader *ngIf="loading()" type="cards" [count]="3"></app-skeleton-loader>
+
+  <!-- Tasks Grid for Selected Date -->
+  <div *ngIf="!loading()" class="tasks-section">
+    <div class="tasks-grid" *ngIf="displayedTasks().length > 0">
+      <div 
+        *ngFor="let task of displayedTasks()" 
+        class="task-card-modern"
+        [ngClass]="'status-border-' + (task.status | lowercase)"
+        (click)="openDetailPopup(task)"
+      >
+        <div class="card-top-row">
+          <div class="status-tags">
+            <app-status-badge type="status" [value]="task.status" [size]="'sm'"></app-status-badge>
+            <app-status-badge type="priority" [value]="task.priority" [size]="'sm'"></app-status-badge>
+          </div>
+          <span *ngIf="task.teamName" class="team-badge">
+            <i class="fa-solid fa-users"></i> {{ task.teamName }}
+          </span>
+        </div>
+
+        <h3 class="task-title-text">{{ task.title }}</h3>
+        <p class="task-desc-text">{{ task.description || 'No description specifications provided.' }}</p>
+
+        <div class="card-bottom-row">
+          <div class="assignee-badge">
+            <div class="avatar-gradient">
+              {{ (task.assignedToUserName || '?').charAt(0) }}
+            </div>
+            <div class="assignee-meta">
+              <span class="name">{{ task.assignedToUserName || 'Unassigned' }}</span>
+              <span class="role">Assignee</span>
+            </div>
+          </div>
+
+          <div class="card-tools">
+            <span *ngIf="task.commentsCount > 0" class="comments-badge" title="Discussion comments">
+              <i class="fa-regular fa-comment-dots"></i> {{ task.commentsCount }}
+            </span>
+            <button class="details-button">
+              <i class="fa-regular fa-eye"></i> Details
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="displayedTasks().length === 0" class="card empty-schedule-box">
+      <div class="empty-icon-circle">
+        <i class="fa-regular fa-calendar-xmark"></i>
+      </div>
+      <h3>No Deliverables Scheduled</h3>
+      <p>There are no tasks assigned or scheduled for delivery on this date.</p>
+      <div class="empty-actions" *ngIf="availableTaskDates().length > 0">
+        <span>Next available date:</span>
+        <button 
+          class="btn btn-primary btn-sm" 
+          (click)="setDate(availableTaskDates()[0])"
+        >
+          View {{ formatChipDate(availableTaskDates()[0]) }} <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Details Full Popup Modal -->
+  <app-task-detail-modal
+    *ngIf="showDetailModal() && selectedTaskForPopup()"
+    [task]="selectedTaskForPopup()!"
+    (statusChanged)="reloadAllTasks()"
+    (closed)="showDetailModal.set(false)"
+  ></app-task-detail-modal>
+</div>

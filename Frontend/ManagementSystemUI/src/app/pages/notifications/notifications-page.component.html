@@ -1,0 +1,65 @@
+<div class="notifications-page">
+  <div class="page-header">
+    <div>
+      <h2 class="section-title">Activity & Notifications</h2>
+      <p class="section-desc">Real-time alerts on task assignments, status changes, and team discussions.</p>
+    </div>
+
+    <button 
+      class="btn btn-secondary btn-sm" 
+      (click)="markAllRead()"
+      [disabled]="notificationService.unreadCount() === 0"
+    >
+      <i class="fa-solid fa-check-double"></i> Mark All as Read
+    </button>
+  </div>
+
+  <div class="card notifs-container-card">
+    <div class="card-body" style="padding: 0;">
+      <div class="notif-feed-list">
+        <div 
+          *ngFor="let n of notificationService.notifications()" 
+          class="full-notif-item" 
+          [class.item-unread]="!n.isRead"
+          (click)="markRead(n.id)"
+        >
+          <div class="notif-type-icon">
+            <i *ngIf="n.type === 'TaskAssigned'" class="fa-solid fa-user-plus text-primary"></i>
+            <i *ngIf="n.type === 'StatusUpdated'" class="fa-solid fa-arrows-rotate text-info"></i>
+            <i *ngIf="n.type === 'CommentAdded'" class="fa-solid fa-comment-dots text-warning"></i>
+          </div>
+
+          <div class="notif-content-box">
+            <div class="notif-title-row">
+              <h4>{{ n.title }}</h4>
+              <span class="notif-date">{{ n.createdAt | date:'medium' }}</span>
+            </div>
+            <p class="notif-msg">{{ n.message }}</p>
+            <div class="notif-tags">
+              <span class="type-tag">{{ n.type }}</span>
+              <span *ngIf="!n.isRead" class="unread-pill">NEW</span>
+            </div>
+          </div>
+
+          <div class="notif-action-col">
+            <button 
+              *ngIf="!n.isRead" 
+              class="btn-icon" 
+              title="Mark as read"
+              (click)="$event.stopPropagation(); markRead(n.id)"
+            >
+              <i class="fa-regular fa-circle-check"></i>
+            </button>
+          </div>
+        </div>
+
+        <app-empty-state
+          *ngIf="notificationService.notifications().length === 0"
+          icon="fa-regular fa-bell-slash"
+          title="No Notifications Found"
+          description="You're all caught up! New updates, task assignments, and discussions will appear here in real time."
+        ></app-empty-state>
+      </div>
+    </div>
+  </div>
+</div>

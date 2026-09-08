@@ -1,0 +1,309 @@
+<div class="dashboard-page">
+  <!-- Top Welcome Banner -->
+  <div class="welcome-card">
+    <div class="welcome-content">
+      <div class="welcome-badge-row">
+        <span class="role-pill-badge">
+          <i class="fa-solid fa-shield-halved" *ngIf="authService.isAdmin()"></i>
+          <i class="fa-solid fa-user-tie" *ngIf="authService.isManager()"></i>
+          <i class="fa-solid fa-user" *ngIf="!authService.isAdmin() && !authService.isManager()"></i>
+          {{ authService.userRole() }} Workspace
+        </span>
+        <span class="greeting-pill"><i class="fa-regular fa-sun"></i> {{ getTimeGreeting() }}</span>
+      </div>
+      <h2>Welcome, {{ authService.currentUser()?.fullName }} 👋</h2>
+      <p>Here is your real-time management control center. Monitor team productivity, workflows, and task execution.</p>
+    </div>
+    <div class="welcome-actions">
+      <a routerLink="/tasks" class="btn btn-primary-glass">
+        <i class="fa-solid fa-table-columns"></i> Open Kanban
+      </a>
+      <a routerLink="/schedule" class="btn btn-secondary-glass">
+        <i class="fa-regular fa-calendar-days"></i> Timeline Schedule
+      </a>
+    </div>
+  </div>
+
+  <!-- Quick Action Launchpad -->
+  <div class="quick-launchpad">
+    <a routerLink="/tasks" class="launchpad-card">
+      <div class="launchpad-icon icon-tasks">
+        <i class="fa-solid fa-list-check"></i>
+      </div>
+      <div class="launchpad-info">
+        <h4>Kanban Board</h4>
+        <p>Drag, filter & track tasks</p>
+      </div>
+      <i class="fa-solid fa-arrow-right launchpad-arrow"></i>
+    </a>
+
+    <a routerLink="/schedule" class="launchpad-card">
+      <div class="launchpad-icon icon-calendar">
+        <i class="fa-regular fa-calendar-check"></i>
+      </div>
+      <div class="launchpad-info">
+        <h4>Daily Schedule</h4>
+        <p>Date-wise work timeline</p>
+      </div>
+      <i class="fa-solid fa-arrow-right launchpad-arrow"></i>
+    </a>
+
+    <a routerLink="/teams" class="launchpad-card">
+      <div class="launchpad-icon icon-teams">
+        <i class="fa-solid fa-users-rectangle"></i>
+      </div>
+      <div class="launchpad-info">
+        <h4>Team Hub</h4>
+        <p>Collaborate with members</p>
+      </div>
+      <i class="fa-solid fa-arrow-right launchpad-arrow"></i>
+    </a>
+
+    <a routerLink="/users" class="launchpad-card" *ngIf="authService.isAdmin()">
+      <div class="launchpad-icon icon-admin-tool">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <div class="launchpad-info">
+        <h4>User Directory</h4>
+        <p>Manage all accounts</p>
+      </div>
+      <i class="fa-solid fa-arrow-right launchpad-arrow"></i>
+    </a>
+
+    <a routerLink="/notifications" class="launchpad-card" *ngIf="!authService.isAdmin()">
+      <div class="launchpad-icon icon-notif">
+        <i class="fa-regular fa-bell"></i>
+      </div>
+      <div class="launchpad-info">
+        <h4>Notifications</h4>
+        <p>Recent activity alerts</p>
+      </div>
+      <i class="fa-solid fa-arrow-right launchpad-arrow"></i>
+    </a>
+  </div>
+
+  <!-- Loading Skeleton State -->
+  <app-skeleton-loader *ngIf="loading()" type="stats" [count]="5"></app-skeleton-loader>
+
+  <!-- Stats Grid using Reusable StatCard Components -->
+  <div class="stats-grid" *ngIf="!loading() && summary() as data">
+    <app-stat-card
+      label="Total Tasks"
+      [value]="data.totalTasks"
+      icon="fa-solid fa-list-ul"
+      iconClass="icon-indigo"
+      badgeText="Active"
+      badgeClass="badge-primary"
+      [subText]="'Assigned & Tracked'"
+    ></app-stat-card>
+
+    <app-stat-card
+      label="To Do"
+      [value]="data.toDoTasks"
+      icon="fa-regular fa-circle-dot"
+      iconClass="icon-slate"
+      badgeText="Backlog"
+      badgeClass="badge-primary"
+      [subText]="'Pending start'"
+    ></app-stat-card>
+
+    <app-stat-card
+      label="In Progress"
+      [value]="data.inProgressTasks"
+      icon="fa-solid fa-spinner fa-spin-pulse"
+      iconClass="icon-cyan"
+      badgeText="Ongoing"
+      badgeClass="badge-warning"
+      [subText]="'Under execution'"
+    ></app-stat-card>
+
+    <app-stat-card
+      label="Completed"
+      [value]="data.doneTasks"
+      icon="fa-solid fa-circle-check"
+      iconClass="icon-emerald"
+      badgeText="Done"
+      badgeClass="badge-success"
+      trendText="100% Quality"
+      [trendPositive]="true"
+    ></app-stat-card>
+
+    <app-stat-card
+      label="Overdue Tasks"
+      [value]="data.overdueTasks"
+      icon="fa-solid fa-triangle-exclamation"
+      iconClass="icon-rose"
+      badgeText="Urgent"
+      badgeClass="badge-danger"
+      [trendPositive]="false"
+      [trendText]="data.overdueTasks > 0 ? 'Requires Attention' : 'On Track'"
+    ></app-stat-card>
+  </div>
+
+  <!-- Main Dashboard Content Split -->
+  <div class="dashboard-split" *ngIf="!loading() && summary() as data">
+    <!-- Left: Recent Tasks Table with Interactive Tabs -->
+    <div class="card recent-tasks-card">
+      <div class="card-header flex-header">
+        <div class="header-title-box">
+          <i class="fa-solid fa-clock-rotate-left text-primary"></i>
+          <h3>Recent Tasks Activity</h3>
+        </div>
+        
+        <!-- Filter Tabs -->
+        <div class="task-tabs-strip">
+          <button 
+            type="button" 
+            class="tab-pill" 
+            [class.active]="recentFilter() === 'all'"
+            (click)="recentFilter.set('all')"
+          >
+            All ({{ data.recentTasks.length }})
+          </button>
+          <button 
+            type="button" 
+            class="tab-pill" 
+            [class.active]="recentFilter() === 'ToDo'"
+            (click)="recentFilter.set('ToDo')"
+          >
+            To Do ({{ getRecentCount('ToDo') }})
+          </button>
+          <button 
+            type="button" 
+            class="tab-pill" 
+            [class.active]="recentFilter() === 'InProgress'"
+            (click)="recentFilter.set('InProgress')"
+          >
+            In Progress ({{ getRecentCount('InProgress') }})
+          </button>
+          <button 
+            type="button" 
+            class="tab-pill" 
+            [class.active]="recentFilter() === 'Done'"
+            (click)="recentFilter.set('Done')"
+          >
+            Done ({{ getRecentCount('Done') }})
+          </button>
+        </div>
+      </div>
+
+      <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+          <table class="custom-table" *ngIf="getFilteredRecentTasks().length > 0">
+            <thead>
+              <tr>
+                <th>Task</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Assignee</th>
+                <th>Due Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of getFilteredRecentTasks()">
+                <td>
+                  <div class="task-title-cell">
+                    <span class="task-main-title">{{ t.title }}</span>
+                    <span *ngIf="t.teamName" class="task-team-tag">
+                      <i class="fa-solid fa-users"></i> {{ t.teamName }}
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <app-status-badge type="status" [value]="t.status"></app-status-badge>
+                </td>
+                <td>
+                  <app-status-badge type="priority" [value]="t.priority"></app-status-badge>
+                </td>
+                <td>
+                  <div class="assignee-cell">
+                    <div class="avatar-small">
+                      {{ (t.assignedToUserName || 'U').charAt(0).toUpperCase() }}
+                    </div>
+                    <span class="assignee-text">{{ t.assignedToUserName || 'Unassigned' }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span [class.text-danger]="isOverdue(t.dueDate, t.status)" class="date-chip">
+                    <i class="fa-regular fa-calendar"></i>
+                    {{ t.dueDate ? (t.dueDate | date:'mediumDate') : 'No deadline' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <app-empty-state
+            *ngIf="getFilteredRecentTasks().length === 0"
+            icon="fa-regular fa-clipboard"
+            title="No Tasks in this Category"
+            description="There are no recent tasks matching this status filter."
+            actionLabel="Create Task"
+            actionIcon="fa-solid fa-plus"
+            (actionClicked)="navigateToTasks()"
+          ></app-empty-state>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Priority & Notifications -->
+    <div class="dashboard-side-col">
+      <!-- Priority Distribution -->
+      <div class="card">
+        <div class="card-header">
+          <div class="header-title-box">
+            <i class="fa-solid fa-chart-pie text-indigo"></i>
+            <h3>Priority Breakdown</h3>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="priority-list">
+            <div *ngFor="let p of data.tasksByPriority" class="priority-item">
+              <div class="priority-info">
+                <span class="priority-name">
+                  <app-status-badge type="priority" [value]="p.priority" [size]="'sm'"></app-status-badge>
+                </span>
+                <span class="priority-count">{{ p.count }} tasks</span>
+              </div>
+              <div class="progress-bar-track">
+                <div 
+                  class="progress-bar-fill" 
+                  [ngClass]="'fill-' + (p.priority | lowercase)"
+                  [style.width.%]="data.totalTasks > 0 ? (p.count / data.totalTasks * 100) : 0"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Notifications Activity -->
+      <div class="card">
+        <div class="card-header">
+          <div class="header-title-box">
+            <i class="fa-solid fa-bell text-warning"></i>
+            <h3>Latest Broadcasts</h3>
+          </div>
+        </div>
+        <div class="card-body" style="padding: 1rem;">
+          <div class="activity-feed">
+            <div *ngFor="let n of data.recentNotifications" class="activity-item">
+              <div class="activity-dot"></div>
+              <div class="activity-content">
+                <h5>{{ n.title }}</h5>
+                <p>{{ n.message }}</p>
+                <span class="activity-time">
+                  <i class="fa-regular fa-clock"></i> {{ n.createdAt | date:'short' }}
+                </span>
+              </div>
+            </div>
+            <div *ngIf="data.recentNotifications.length === 0" class="empty-activity">
+              <i class="fa-regular fa-bell-slash"></i>
+              <span>No recent activities or alerts.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

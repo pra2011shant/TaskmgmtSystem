@@ -6,10 +6,8 @@ import { ToastComponent } from './components/toast/toast.component';
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, ToastComponent],
-  template: `
-    <app-toast></app-toast>
-    <router-outlet></router-outlet>
-  `
+  templateUrl: './app.component.html',
+  styleUrl: './app.component.css'
 })
 export class AppComponent {
   title = 'WorkFlow Pro';

@@ -8,16 +8,7 @@ import { NavbarComponent } from './navbar.component';
   selector: 'app-layout',
   standalone: true,
   imports: [CommonModule, RouterModule, SidebarComponent, NavbarComponent],
-  template: `
-    <div class="app-container">
-      <app-sidebar></app-sidebar>
-      <div class="main-content">
-        <app-navbar></app-navbar>
-        <main class="page-body">
-          <router-outlet></router-outlet>
-        </main>
-      </div>
-    </div>
-  `
+  templateUrl: './layout.component.html',
+  styleUrl: './layout.component.css'
 })
 export class LayoutComponent {}

@@ -1,0 +1,4 @@
+.text-success { color: var(--success); font-size: 1.125rem; }
+.text-danger { color: var(--danger); font-size: 1.125rem; }
+.text-warning { color: var(--warning); font-size: 1.125rem; }
+.text-info { color: var(--info); font-size: 1.125rem; }

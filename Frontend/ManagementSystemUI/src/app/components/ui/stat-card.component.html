@@ -1,0 +1,21 @@
+<div class="stat-card" [ngClass]="variant">
+  <div class="stat-header">
+    <div class="stat-icon-wrapper" [ngClass]="iconClass">
+      <i [class]="icon"></i>
+    </div>
+    <div *ngIf="badgeText" class="stat-badge" [ngClass]="badgeClass">
+      {{ badgeText }}
+    </div>
+  </div>
+  <div class="stat-body">
+    <div class="stat-value">{{ value }}</div>
+    <div class="stat-label">{{ label }}</div>
+  </div>
+  <div *ngIf="trendText" class="stat-footer">
+    <span class="trend-text" [ngClass]="trendPositive ? 'positive' : 'negative'">
+      <i [class]="trendPositive ? 'fa-solid fa-arrow-trend-up' : 'fa-solid fa-arrow-trend-down'"></i>
+      {{ trendText }}
+    </span>
+    <span class="sub-text" *ngIf="subText">{{ subText }}</span>
+  </div>
+</div>

@@ -1,0 +1,152 @@
+<header class="navbar">
+  <div class="navbar-left">
+    <button class="mobile-toggle-btn" (click)="toggleMobileSidebar()">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+    <div class="page-title-wrap">
+      <div class="title-row">
+        <div class="system-nav-icon">
+          <span>⚡</span>
+        </div>
+        <h1 class="page-header-title">WorkFlow Pro</h1>
+        <span class="active-badge"><i class="fa-solid fa-circle"></i> Live System</span>
+      </div>
+      <span class="page-subtitle">Welcome back, <strong>{{ authService.currentUser()?.fullName }}</strong></span>
+    </div>
+  </div>
+
+  <div class="navbar-right">
+    <!-- Quick Role Switcher Dropdown (User Defined Persona Switcher) -->
+    <div class="persona-dropdown-wrap">
+      <button class="persona-switch-btn" (click)="togglePersonaDropdown()" title="Switch Persona / Role">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span class="persona-text">Switch Persona:</span>
+        <span class="role-badge" [ngClass]="'role-' + (authService.userRole() | lowercase)">
+          {{ authService.userRole() }}
+        </span>
+        <i class="fa-solid fa-chevron-down caret-icon"></i>
+      </button>
+
+      <!-- Persona Popover -->
+      <div class="persona-popover" *ngIf="isPersonaOpen()">
+        <div class="popover-header">
+          <h4><i class="fa-solid fa-users-gear"></i> Quick Role Switcher</h4>
+          <span class="popover-sub">1-Click test any persona instantly</span>
+        </div>
+        <div class="persona-list">
+          <button 
+            type="button" 
+            class="persona-card" 
+            [class.current]="authService.isAdmin()"
+            (click)="switchPersona('admin@system.com', 'Admin@123', 'Administrator')"
+          >
+            <div class="persona-icon icon-admin">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div class="persona-details">
+              <div class="persona-name-row">
+                <strong>System Administrator</strong>
+                <span *ngIf="authService.isAdmin()" class="active-tag">Current</span>
+              </div>
+              <p>Full control over users, teams, settings & tasks</p>
+              <span class="persona-email">admin&#64;system.com</span>
+            </div>
+          </button>
+
+          <button 
+            type="button" 
+            class="persona-card" 
+            [class.current]="authService.isManager() && !authService.isAdmin()"
+            (click)="switchPersona('manager@system.com', 'Manager@123', 'Project Manager')"
+          >
+            <div class="persona-icon icon-manager">
+              <i class="fa-solid fa-user-tie"></i>
+            </div>
+            <div class="persona-details">
+              <div class="persona-name-row">
+                <strong>Project Manager</strong>
+                <span *ngIf="authService.isManager() && !authService.isAdmin()" class="active-tag">Current</span>
+              </div>
+              <p>Create & assign tasks, manage teams and deadlines</p>
+              <span class="persona-email">manager&#64;system.com</span>
+            </div>
+          </button>
+
+          <button 
+            type="button" 
+            class="persona-card" 
+            [class.current]="!authService.isManager()"
+            (click)="switchPersona('rahul@system.com', 'User@123', 'Team Member (Rahul)')"
+          >
+            <div class="persona-icon icon-user">
+              <i class="fa-solid fa-user"></i>
+            </div>
+            <div class="persona-details">
+              <div class="persona-name-row">
+                <strong>Team Member (Rahul)</strong>
+                <span *ngIf="!authService.isManager()" class="active-tag">Current</span>
+              </div>
+              <p>Execute assigned tasks, update Kanban status & comments</p>
+              <span class="persona-email">rahul&#64;system.com</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Notifications Dropdown Trigger -->
+    <div class="notif-dropdown-wrapper">
+      <button class="notif-btn" (click)="toggleNotifDropdown()" title="Notifications">
+        <i class="fa-regular fa-bell"></i>
+        <span class="notif-badge" *ngIf="notificationService.unreadCount() > 0">
+          {{ notificationService.unreadCount() }}
+        </span>
+      </button>
+
+      <!-- Dropdown Popover -->
+      <div class="notif-popover" *ngIf="isNotifOpen()">
+        <div class="notif-popover-header">
+          <h3>Notifications</h3>
+          <button class="btn-text" (click)="notificationService.markAllAsRead().subscribe()">Mark all read</button>
+        </div>
+        <div class="notif-list">
+          <div 
+            *ngFor="let n of notificationService.notifications().slice(0, 6)" 
+            class="notif-item" 
+            [class.unread]="!n.isRead"
+            (click)="markRead(n.id)"
+          >
+            <div class="notif-icon-circle">
+              <i *ngIf="n.type === 'TaskAssigned'" class="fa-solid fa-user-plus text-primary"></i>
+              <i *ngIf="n.type === 'StatusUpdated'" class="fa-solid fa-arrows-rotate text-info"></i>
+              <i *ngIf="n.type === 'CommentAdded'" class="fa-solid fa-comment-dots text-warning"></i>
+            </div>
+            <div class="notif-text">
+              <h5>{{ n.title }}</h5>
+              <p>{{ n.message }}</p>
+              <span class="time">{{ n.createdAt | date:'shortTime' }}</span>
+            </div>
+          </div>
+          <div *ngIf="notificationService.notifications().length === 0" class="notif-empty">
+            <i class="fa-regular fa-bell-slash"></i>
+            <p>No notifications yet</p>
+          </div>
+        </div>
+        <div class="notif-popover-footer">
+          <a routerLink="/notifications" (click)="isNotifOpen.set(false)">View all notifications</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Profile Pill -->
+    <div class="user-pill">
+      <div class="avatar-small">
+        {{ authService.currentUser()?.fullName?.charAt(0) }}
+      </div>
+      <div class="user-meta">
+        <span class="user-name">{{ authService.currentUser()?.fullName }}</span>
+        <span class="user-role-text">{{ authService.userRole() }}</span>
+      </div>
+    </div>
+  </div>
+</header>

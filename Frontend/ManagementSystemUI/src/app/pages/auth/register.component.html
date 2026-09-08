@@ -1,0 +1,109 @@
+<div [ngClass]="isAdminMode() ? 'admin-register-wrapper' : 'auth-page-container'">
+  <div class="auth-card" [class.admin-card-layout]="isAdminMode()">
+    <!-- Header -->
+    <div class="auth-header">
+      <div class="brand-badge">
+        <i class="fa-solid fa-user-plus"></i>
+      </div>
+      <h2>{{ isAdminMode() ? 'Register New System User' : 'Create Account' }}</h2>
+      <p>{{ isAdminMode() ? 'Provision an employee account and assign role privileges.' : 'Join WorkFlow Pro and collaborate seamlessly.' }}</p>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="auth-form">
+      <div class="form-group">
+        <label class="form-label">Full Name *</label>
+        <input 
+          type="text" 
+          class="form-control" 
+          [(ngModel)]="fullName" 
+          name="fullName" 
+          placeholder="e.g. John Doe" 
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email Address *</label>
+        <input 
+          type="email" 
+          class="form-control" 
+          [(ngModel)]="email" 
+          name="email" 
+          placeholder="name@company.com" 
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">System Role *</label>
+        <select class="form-select" [(ngModel)]="role" name="role">
+          <option [ngValue]="3">Team Member (User)</option>
+          <option [ngValue]="2">Manager</option>
+          <option [ngValue]="1">Administrator</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password *</label>
+        <div class="input-with-icon">
+          <i class="fa-solid fa-lock"></i>
+          <input 
+            [type]="showPassword() ? 'text' : 'password'" 
+            class="form-control" 
+            [(ngModel)]="password" 
+            name="password" 
+            placeholder="Min 6 chars with 1 special char (e.g. Pass@123)" 
+            required
+          />
+          <button 
+            type="button" 
+            class="password-toggle" 
+            (click)="showPassword.set(!showPassword())"
+            [title]="showPassword() ? 'Hide Password' : 'Show Password'"
+          >
+            <i [ngClass]="showPassword() ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye'"></i>
+          </button>
+        </div>
+        <!-- Password validation indicators -->
+        <div class="password-requirements">
+          <div class="req-item" [class.valid]="isLengthValid">
+            <i class="fa-solid" [ngClass]="isLengthValid ? 'fa-circle-check' : 'fa-circle-xmark'"></i>
+            <span>Minimum 6 characters</span>
+          </div>
+          <div class="req-item" [class.valid]="hasSpecialChar">
+            <i class="fa-solid" [ngClass]="hasSpecialChar ? 'fa-circle-check' : 'fa-circle-xmark'"></i>
+            <span>At least 1 special character (&#64;, #, $, %, !, &amp;, *)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Optional Remarks (Visible in Admin Mode) -->
+      <div class="form-group" *ngIf="isAdminMode()">
+        <label class="form-label">
+          <i class="fa-solid fa-shield-halved text-primary"></i> Administrative Remarks
+        </label>
+        <input 
+          type="text" 
+          class="form-control" 
+          [(ngModel)]="remarks" 
+          name="remarks" 
+          placeholder="Department, employee ID, or onboarding notes..."
+        />
+      </div>
+
+      <div class="form-actions">
+        <a *ngIf="isAdminMode()" routerLink="/users" class="btn btn-secondary">
+          <i class="fa-solid fa-arrow-left"></i> Cancel
+        </a>
+        <button type="submit" class="btn btn-primary auth-submit-btn" [disabled]="loading()">
+          <span *ngIf="!loading()"><i class="fa-solid fa-user-check"></i> {{ isAdminMode() ? 'Provision Account' : 'Register Account' }}</span>
+          <span *ngIf="loading()"><i class="fa-solid fa-spinner fa-spin"></i> Creating account...</span>
+        </button>
+      </div>
+    </form>
+
+    <div class="auth-footer" *ngIf="!isAdminMode()">
+      <p>Already have an account? <a routerLink="/login">Sign in</a></p>
+    </div>
+  </div>
+</div>
