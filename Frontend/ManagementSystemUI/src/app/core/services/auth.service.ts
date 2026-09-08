@@ -1,14 +1,7 @@
-/**
- * Authentication & Identity State Service
- * 
- * Manages user credentials, JWT session persistence, and reactive identity states
- * using modern Angular Signals (`currentUser`, `token`, `isAuthenticated`, `userRole`).
- */
-
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, of, catchError } from 'rxjs';
 import { AuthResponse, LoginRequest, RegisterRequest, User } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
 
@@ -19,12 +12,13 @@ export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
   
-  // REST API endpoint for authentication controllers
   private apiUrl = `${environment.apiUrl}/auth`;
 
   // ===================== Reactive State using Angular Signals =====================
   currentUser = signal<User | null>(this.getStoredUser());
   token = signal<string | null>(localStorage.getItem('token'));
+  refreshToken = signal<string | null>(localStorage.getItem('refreshToken'));
+  permissions = signal<string[]>(this.getStoredPermissions());
 
   // Reactive computed role flags
   isAuthenticated = computed(() => !!this.token() && !!this.currentUser());
@@ -33,17 +27,13 @@ export class AuthService {
   userRole = computed(() => this.currentUser()?.role || '');
 
   constructor() {
-    // Validate existing session token against server profile endpoint
     if (this.token()) {
       this.fetchCurrentUser().subscribe({
-        error: () => this.logout()
+        error: () => this.handleSessionExpiry()
       });
     }
   }
 
-  /**
-   * Retrieves user session profile cached in browser localStorage.
-   */
   private getStoredUser(): User | null {
     const userStr = localStorage.getItem('user');
     if (!userStr) return null;
@@ -54,34 +44,53 @@ export class AuthService {
     }
   }
 
-  /**
-   * Dispatches new user registration request to API (for public self-registration if enabled).
-   */
+  private getStoredPermissions(): string[] {
+    const perms = localStorage.getItem('permissions');
+    if (!perms) return [];
+    try {
+      return JSON.parse(perms);
+    } catch {
+      return [];
+    }
+  }
+
+  hasPermission(permission: string): boolean {
+    if (this.isAdmin()) return true;
+    return this.permissions().includes(permission);
+  }
+
   register(payload: RegisterRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/register`, payload).pipe(
       tap(res => this.handleAuthSuccess(res))
     );
   }
 
-  /**
-   * Provisions a new user account without replacing the active administrator session token.
-   */
   adminRegisterUser(payload: RegisterRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/register`, payload);
   }
 
-  /**
-   * Authenticates user credentials with API and establishes session tokens.
-   */
   login(payload: LoginRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/login`, payload).pipe(
       tap(res => this.handleAuthSuccess(res))
     );
   }
 
-  /**
-   * Fetches active user identity claims from server profile endpoint.
-   */
+  refreshSession(): Observable<AuthResponse> {
+    const rfToken = this.refreshToken();
+    if (!rfToken) {
+      this.logout();
+      return of({} as AuthResponse);
+    }
+
+    return this.http.post<AuthResponse>(`${this.apiUrl}/refresh-token`, { refreshToken: rfToken }).pipe(
+      tap(res => this.handleAuthSuccess(res)),
+      catchError(err => {
+        this.logout();
+        throw err;
+      })
+    );
+  }
+
   fetchCurrentUser(): Observable<User> {
     return this.http.get<User>(`${this.apiUrl}/me`).pipe(
       tap(user => {
@@ -91,31 +100,57 @@ export class AuthService {
     );
   }
 
-  /**
-   * Retrieves active users directory for assignment selection.
-   */
   getAllUsers(): Observable<User[]> {
     return this.http.get<User[]>(`${this.apiUrl}/users`);
   }
 
-  /**
-   * Terminates active session, clears localStorage, and redirects to login screen.
-   */
-  logout(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    this.token.set(null);
-    this.currentUser.set(null);
-    this.router.navigate(['/login']);
+  private handleAuthSuccess(res: AuthResponse): void {
+    if (res.token) {
+      this.token.set(res.token);
+      localStorage.setItem('token', res.token);
+    }
+    if (res.refreshToken) {
+      this.refreshToken.set(res.refreshToken);
+      localStorage.setItem('refreshToken', res.refreshToken);
+    }
+    if (res.user) {
+      this.currentUser.set(res.user);
+      localStorage.setItem('user', JSON.stringify(res.user));
+    }
+    if (res.permissions) {
+      this.permissions.set(res.permissions);
+      localStorage.setItem('permissions', JSON.stringify(res.permissions));
+    }
   }
 
-  /**
-   * Persists authentication response token and user profile into reactive state and localStorage.
-   */
-  private handleAuthSuccess(res: AuthResponse): void {
-    localStorage.setItem('token', res.token);
-    localStorage.setItem('user', JSON.stringify(res.user));
-    this.token.set(res.token);
-    this.currentUser.set(res.user);
+  private handleSessionExpiry(): void {
+    if (this.refreshToken()) {
+      this.refreshSession().subscribe({
+        error: () => this.logout()
+      });
+    } else {
+      this.logout();
+    }
+  }
+
+  logout(): void {
+    const rfToken = this.refreshToken();
+    if (rfToken) {
+      this.http.post(`${this.apiUrl}/revoke-token`, { refreshToken: rfToken }).subscribe({
+        error: () => {}
+      });
+    }
+
+    this.currentUser.set(null);
+    this.token.set(null);
+    this.refreshToken.set(null);
+    this.permissions.set([]);
+
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('permissions');
+
+    this.router.navigate(['/login']);
   }
 }

@@ -30,6 +30,16 @@ namespace ManagementSystem.Models
         [Required]
         public UserRole Role { get; set; } = UserRole.User;
 
+        [MaxLength(100)]
+        public string? Department { get; set; }
+
+        public int FailedLoginAttempts { get; set; } = 0;
+
+        public DateTime? LockoutEnd { get; set; }
+
+        [NotMapped]
+        public bool IsLockedOut => LockoutEnd.HasValue && LockoutEnd.Value > DateTime.UtcNow;
+
         [NotMapped]
         public DateTime CreatedAt
         {
@@ -43,5 +53,6 @@ namespace ManagementSystem.Models
         public ICollection<TaskItem> CreatedTasks { get; set; } = new List<TaskItem>();
         public ICollection<TaskComment> Comments { get; set; } = new List<TaskComment>();
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+        public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     }
 }

@@ -1,109 +1,156 @@
-<div class="modal-overlay" (click)="close()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
+<div class="modal-backdrop" (click)="handleClose()">
+  <div class="modal-dialog" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <i class="fa-solid fa-pen-to-square text-primary"></i>
-        <h3 style="margin: 0; font-size: 1.125rem; font-weight: 700;">
-          {{ task ? 'Edit Task' : 'Create New Task' }}
-        </h3>
-      </div>
-      <button class="btn-icon" (click)="close()"><i class="fa-solid fa-xmark"></i></button>
+      <h2>{{ task ? 'Edit Task Specifications' : 'Create New Work Item' }}</h2>
+      <button class="close-btn" (click)="handleClose()">✕</button>
     </div>
 
-    <form (ngSubmit)="saveTask()">
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Task Title *</label>
+    <form (ngSubmit)="saveTask()" class="modal-form">
+      <div class="form-grid">
+        <!-- Title -->
+        <div class="form-group full-width">
+          <label>Task Title *</label>
           <input 
             type="text" 
-            class="form-control" 
             [(ngModel)]="title" 
             name="title" 
-            placeholder="e.g. Implement OAuth JWT Login" 
-            required 
+            placeholder="e.g., Integrate Stripe Payment Gateway" 
+            required
+            class="form-control"
           />
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Description</label>
+        <!-- Description -->
+        <div class="form-group full-width">
+          <label>Detailed Specifications</label>
           <textarea 
-            class="form-control" 
             rows="3" 
             [(ngModel)]="description" 
             name="description" 
-            placeholder="Details, requirements, acceptance criteria..."
+            placeholder="Describe deliverables, technical requirements, acceptance criteria..."
+            class="form-control"
           ></textarea>
         </div>
 
-        <div class="form-row-2">
-          <div class="form-group">
-            <label class="form-label">Status</label>
-            <select class="form-select" [(ngModel)]="status" name="status">
-              <option [ngValue]="1">To Do</option>
-              <option [ngValue]="2">In Progress</option>
-              <option [ngValue]="3">Done</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Priority</label>
-            <select class="form-select" [(ngModel)]="priority" name="priority">
-              <option [ngValue]="1">Low</option>
-              <option [ngValue]="2">Medium</option>
-              <option [ngValue]="3">High</option>
-              <option [ngValue]="4">Urgent</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-row-2">
-          <div class="form-group">
-            <label class="form-label">Assigned Team</label>
-            <select class="form-select" [(ngModel)]="teamId" name="teamId">
-              <option [ngValue]="null">No Team / General</option>
-              <option *ngFor="let team of teams()" [ngValue]="team.id">{{ team.name }}</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Assignee</label>
-            <select class="form-select" [(ngModel)]="assignedToUserId" name="assignedToUserId">
-              <option [ngValue]="null">Unassigned</option>
-              <option *ngFor="let u of users()" [ngValue]="u.id">{{ u.fullName }} ({{ u.role }})</option>
-            </select>
-          </div>
-        </div>
-
+        <!-- Category & Tags -->
         <div class="form-group">
-          <label class="form-label">Due Date</label>
+          <label>Category</label>
           <input 
-            type="date" 
-            class="form-control" 
-            [(ngModel)]="dueDate" 
-            name="dueDate" 
+            type="text" 
+            [(ngModel)]="category" 
+            name="category" 
+            placeholder="e.g. Backend, Frontend, DevOps" 
+            class="form-control"
           />
         </div>
 
-        <!-- Administrative Remarks (Admin Only) -->
-        <div class="form-group" *ngIf="authService.isAdmin()">
-          <label class="form-label">
-            <i class="fa-solid fa-shield-halved text-primary"></i> Administrative Remarks (Admin Only)
-          </label>
+        <div class="form-group">
+          <label>Tags (Comma separated)</label>
           <input 
             type="text" 
-            class="form-control" 
+            [(ngModel)]="tags" 
+            name="tags" 
+            placeholder="e.g. api, auth, urgent" 
+            class="form-control"
+          />
+        </div>
+
+        <!-- Status & Priority -->
+        <div class="form-group">
+          <label>Workflow Status</label>
+          <select [(ngModel)]="status" name="status" class="form-control">
+            <option [value]="2">To Do</option>
+            <option [value]="3">In Progress</option>
+            <option [value]="4">Review</option>
+            <option [value]="5">Done</option>
+            <option [value]="6">Blocked</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Urgency Priority</label>
+          <select [(ngModel)]="priority" name="priority" class="form-control">
+            <option [value]="1">Low</option>
+            <option [value]="2">Medium</option>
+            <option [value]="3">High</option>
+            <option [value]="4">Critical / Urgent</option>
+          </select>
+        </div>
+
+        <!-- Estimated Hours & Due Date -->
+        <div class="form-group">
+          <label>Estimated Hours</label>
+          <input 
+            type="number" 
+            [(ngModel)]="estimatedHours" 
+            name="estimatedHours" 
+            placeholder="e.g. 12" 
+            class="form-control"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Due Date</label>
+          <input 
+            type="date" 
+            [(ngModel)]="dueDate" 
+            name="dueDate" 
+            class="form-control"
+          />
+        </div>
+
+        <!-- Team & Assignee -->
+        <div class="form-group">
+          <label>Department / Team</label>
+          <select [(ngModel)]="teamId" name="teamId" class="form-control">
+            <option [ngValue]="null">None (Cross-functional)</option>
+            @for (team of teams(); track team.id) {
+              <option [ngValue]="team.id">{{ team.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Assignee</label>
+          <select [(ngModel)]="assignedToUserId" name="assignedToUserId" class="form-control">
+            <option [ngValue]="null">Unassigned</option>
+            @for (user of users(); track user.id) {
+              <option [ngValue]="user.id">{{ user.fullName }} ({{ user.role }})</option>
+            }
+          </select>
+        </div>
+
+        <!-- Initial Subtasks (When creating new task) -->
+        @if (!task) {
+          <div class="form-group full-width">
+            <label>Initial Subtasks Breakdown (1 per line)</label>
+            <textarea 
+              rows="2" 
+              [(ngModel)]="initialSubtasksText" 
+              name="initialSubtasksText" 
+              placeholder="Design UI layout&#10;Write integration test suite&#10;Deploy to staging"
+              class="form-control"
+            ></textarea>
+          </div>
+        }
+
+        <!-- Admin Remarks -->
+        <div class="form-group full-width">
+          <label>Administrative Remarks</label>
+          <input 
+            type="text" 
             [(ngModel)]="remarks" 
             name="remarks" 
-            placeholder="Optional audit tracking notes or remarks..." 
+            placeholder="Internal tracking remarks..." 
+            class="form-control"
           />
         </div>
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="close()">Cancel</button>
+        <button type="button" class="btn btn-secondary" (click)="handleClose()">Cancel</button>
         <button type="submit" class="btn btn-primary" [disabled]="loading()">
-          <i *ngIf="loading()" class="fa-solid fa-spinner fa-spin"></i>
-          <span>{{ task ? 'Save Changes' : 'Create Task' }}</span>
+          {{ loading() ? 'Saving Work Item...' : (task ? 'Save Changes' : 'Create Task') }}
         </button>
       </div>
     </form>

@@ -1,423 +1,335 @@
 <div class="tasks-page">
-  <!-- Header Actions & Controls -->
-  <div class="tasks-page-header">
+  <div class="tasks-header">
     <div>
-      <h2 class="section-title">Tasks & Kanban Board</h2>
-      <p class="section-desc">Manage, filter, and track status across all workflows.</p>
+      <h1 class="page-title">Tasks & Kanban Workflow</h1>
+      <p class="page-subtitle">Collaborate on sprint deliverables with real-time state synchronization</p>
     </div>
 
     <div class="header-actions">
-      <!-- Calendar Schedule View Link -->
-      <a routerLink="/schedule" class="btn btn-secondary">
-        <i class="fa-regular fa-calendar-days"></i> Timeline Schedule
-      </a>
-
-      <!-- View Toggle Switch -->
-      <div class="view-switch">
+      <div class="view-toggle">
         <button 
-          type="button" 
-          class="switch-btn" 
-          [class.active]="viewMode() === 'board'"
+          class="toggle-btn" 
+          [class.active]="viewMode() === 'board'" 
           (click)="viewMode.set('board')"
+          title="Board View"
         >
-          <i class="fa-solid fa-table-columns"></i> Kanban
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="18" rx="1"></rect>
+            <rect x="14" y="3" width="7" height="10" rx="1"></rect>
+          </svg>
+          Kanban
         </button>
         <button 
-          type="button" 
-          class="switch-btn" 
-          [class.active]="viewMode() === 'table'"
+          class="toggle-btn" 
+          [class.active]="viewMode() === 'table'" 
           (click)="viewMode.set('table')"
+          title="Table View"
         >
-          <i class="fa-solid fa-table-list"></i> Table
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          Table
         </button>
       </div>
 
-      <!-- Create Task Button (Admin / Manager) -->
-      <button 
-        *ngIf="authService.isManager()" 
-        class="btn btn-primary" 
-        (click)="openCreateModal()"
-      >
-        <i class="fa-solid fa-plus"></i> Create Task
-      </button>
+      @if (authService.isManager()) {
+        <button class="btn btn-primary" (click)="openCreateModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Create Task
+        </button>
+      }
     </div>
   </div>
 
-  <!-- Filter Bar with Quick Chips -->
-  <div class="card filter-bar-card">
-    <!-- Quick Preset Filter Chips -->
-    <div class="quick-preset-chips">
-      <button 
-        type="button" 
-        class="preset-chip" 
-        [class.active]="quickChip() === 'all'" 
-        (click)="applyQuickChip('all')"
-      >
-        <i class="fa-solid fa-layer-group"></i> All Tasks ({{ tasks().length }})
-      </button>
+  <!-- Filter Bar -->
+  <div class="filter-card">
+    <div class="filter-row">
+      <div class="search-input-wrapper">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input 
+          type="text" 
+          placeholder="Search by title, specs, tags, category..." 
+          [(ngModel)]="search" 
+          (keyup.enter)="applyFilters()"
+          class="search-input"
+        />
+      </div>
 
-      <button 
-        type="button" 
-        class="preset-chip" 
-        [class.active]="quickChip() === 'my'" 
-        (click)="applyQuickChip('my')"
-      >
-        <i class="fa-solid fa-user-check"></i> Assigned to Me
-      </button>
+      <select [(ngModel)]="priorityFilter" (change)="applyFilters()" class="filter-select">
+        <option [ngValue]="null">All Priorities</option>
+        <option [ngValue]="1">Low</option>
+        <option [ngValue]="2">Medium</option>
+        <option [ngValue]="3">High</option>
+        <option [ngValue]="4">Critical / Urgent</option>
+      </select>
 
-      <button 
-        type="button" 
-        class="preset-chip chip-urgent" 
-        [class.active]="quickChip() === 'urgent'" 
-        (click)="applyQuickChip('urgent')"
-      >
-        <i class="fa-solid fa-fire"></i> High / Urgent Priority
-      </button>
+      <select [(ngModel)]="teamFilter" (change)="applyFilters()" class="filter-select">
+        <option [ngValue]="null">All Departments</option>
+        @for (team of teams(); track team.id) {
+          <option [ngValue]="team.id">{{ team.name }}</option>
+        }
+      </select>
 
-      <button 
-        type="button" 
-        class="preset-chip chip-overdue" 
-        [class.active]="quickChip() === 'overdue'" 
-        (click)="applyQuickChip('overdue')"
-      >
-        <i class="fa-solid fa-triangle-exclamation"></i> Overdue Tasks
-      </button>
+      <button class="btn btn-secondary" (click)="resetFilters()">Reset</button>
     </div>
 
-    <div class="filter-grid">
-      <!-- Search input -->
-      <div class="filter-col search-col">
-        <div class="input-with-icon">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <input 
-            type="text" 
-            class="form-control" 
-            [(ngModel)]="search" 
-            (ngModelChange)="applyFilters()" 
-            placeholder="Search by title, description or tag..."
-          />
-        </div>
-      </div>
-
-      <!-- Status Filter -->
-      <div class="filter-col">
-        <select class="form-select" [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()">
-          <option [ngValue]="null">All Statuses</option>
-          <option [ngValue]="1">To Do</option>
-          <option [ngValue]="2">In Progress</option>
-          <option [ngValue]="3">Done</option>
-        </select>
-      </div>
-
-      <!-- Priority Filter -->
-      <div class="filter-col">
-        <select class="form-select" [(ngModel)]="priorityFilter" (ngModelChange)="applyFilters()">
-          <option [ngValue]="null">All Priorities</option>
-          <option [ngValue]="1">Low</option>
-          <option [ngValue]="2">Medium</option>
-          <option [ngValue]="3">High</option>
-          <option [ngValue]="4">Urgent</option>
-        </select>
-      </div>
-
-      <!-- Team Filter -->
-      <div class="filter-col">
-        <select class="form-select" [(ngModel)]="teamFilter" (ngModelChange)="applyFilters()">
-          <option [ngValue]="null">All Teams</option>
-          <option *ngFor="let tm of teams()" [ngValue]="tm.id">{{ tm.name }}</option>
-        </select>
-      </div>
-
-      <!-- Reset Filter -->
-      <div class="filter-col-reset">
-        <button class="btn btn-secondary btn-sm" (click)="resetFilters()" title="Reset All Filters">
-          <i class="fa-solid fa-arrow-rotate-left"></i> Reset
-        </button>
-      </div>
+    <div class="quick-chips-row">
+      <button class="chip" [class.active]="quickChip() === 'all'" (click)="applyQuickChip('all')">All Work</button>
+      <button class="chip" [class.active]="quickChip() === 'my'" (click)="applyQuickChip('my')">My Assigned Items</button>
+      <button class="chip" [class.active]="quickChip() === 'urgent'" (click)="applyQuickChip('urgent')">🔥 Critical & Urgent</button>
+      <button class="chip" [class.active]="quickChip() === 'overdue'" (click)="applyQuickChip('overdue')">⚠️ Overdue</button>
     </div>
   </div>
 
-  <!-- Loading State -->
-  <app-skeleton-loader *ngIf="loading()" [type]="viewMode() === 'board' ? 'kanban' : 'table'"></app-skeleton-loader>
-
-  <!-- 1. KANBAN BOARD VIEW -->
-  <div *ngIf="!loading() && viewMode() === 'board'" class="kanban-board-container">
-    <!-- To Do Column -->
-    <div class="kanban-column column-todo">
-      <div class="column-header">
-        <div class="col-title-wrap">
-          <span class="col-dot dot-todo"></span>
-          <h4>To Do</h4>
-          <span class="col-count">{{ getTasksByStatus('ToDo').length }}</span>
-        </div>
-        <button *ngIf="authService.isManager()" class="col-add-btn" (click)="openCreateModal()" title="Add Task">
-          <i class="fa-solid fa-plus"></i> New
-        </button>
-      </div>
-
-      <div class="kanban-cards-wrapper">
-        <div 
-          *ngFor="let t of getTasksByStatus('ToDo')" 
-          class="kanban-card" 
-          (click)="openDetailModal(t)"
-        >
-          <div class="card-top">
-            <span class="badge" [ngClass]="'badge-' + (t.priority | lowercase)">
-              <i *ngIf="t.priority === 'Urgent'" class="fa-solid fa-fire"></i>
-              <i *ngIf="t.priority === 'High'" class="fa-solid fa-bolt"></i>
-              {{ t.priority }}
-            </span>
-            <span *ngIf="t.teamName" class="card-team-pill">{{ t.teamName }}</span>
-          </div>
-          <h4 class="card-task-title">{{ t.title }}</h4>
-          <p class="card-desc">{{ t.description }}</p>
-
-          <div class="card-date-row" *ngIf="t.dueDate">
-            <span class="due-badge" [class.due-alert]="isOverdue(t.dueDate, t.status)">
-              <i class="fa-regular fa-clock"></i> {{ t.dueDate | date:'mediumDate' }}
-            </span>
-          </div>
-
-          <div class="card-bottom">
-            <div class="card-assignee">
-              <div class="avatar-tiny">{{ (t.assignedToUserName || '?').charAt(0) }}</div>
-              <span>{{ t.assignedToUserName || 'Unassigned' }}</span>
-            </div>
-            <div class="card-meta-right">
-              <span *ngIf="t.commentsCount > 0" class="comment-count-tag" title="Comments">
-                <i class="fa-regular fa-comment"></i> {{ t.commentsCount }}
-              </span>
-              <div class="status-shift-btns" (click)="$event.stopPropagation()">
-                <button class="shift-btn shift-start" title="Start task (Move to In Progress)" (click)="moveStatus(t, 2)">
-                  <span>Start</span> <i class="fa-solid fa-arrow-right"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div *ngIf="getTasksByStatus('ToDo').length === 0" class="empty-col">
-          <i class="fa-regular fa-circle-check"></i>
-          <p>No tasks in To Do</p>
-        </div>
-      </div>
+  @if (loading()) {
+    <div class="loading-container">
+      <app-skeleton-loader></app-skeleton-loader>
     </div>
-
-    <!-- In Progress Column -->
-    <div class="kanban-column column-inprogress">
-      <div class="column-header">
-        <div class="col-title-wrap">
-          <span class="col-dot dot-inprogress"></span>
-          <h4>In Progress</h4>
-          <span class="col-count">{{ getTasksByStatus('InProgress').length }}</span>
-        </div>
-        <button *ngIf="authService.isManager()" class="col-add-btn" (click)="openCreateModal()" title="Add Task">
-          <i class="fa-solid fa-plus"></i> New
-        </button>
-      </div>
-
-      <div class="kanban-cards-wrapper">
+  } @else if (tasks().length === 0) {
+    <app-empty-state
+      title="No tasks match the selected criteria"
+      description="Adjust your search filters or create a new deliverable item."
+    ></app-empty-state>
+  } @else {
+    <!-- KANBAN BOARD VIEW -->
+    @if (viewMode() === 'board') {
+      <div class="kanban-board">
+        <!-- Column: TO DO -->
         <div 
-          *ngFor="let t of getTasksByStatus('InProgress')" 
-          class="kanban-card card-inprogress" 
-          (click)="openDetailModal(t)"
+          class="kanban-column" 
+          (dragover)="onDragOver($event)" 
+          (drop)="onDrop($event, 2)"
         >
-          <div class="card-top">
-            <span class="badge" [ngClass]="'badge-' + (t.priority | lowercase)">
-              <i *ngIf="t.priority === 'Urgent'" class="fa-solid fa-fire"></i>
-              <i *ngIf="t.priority === 'High'" class="fa-solid fa-bolt"></i>
-              {{ t.priority }}
-            </span>
-            <span *ngIf="t.teamName" class="card-team-pill">{{ t.teamName }}</span>
+          <div class="col-header header-todo">
+            <span class="col-title">To Do</span>
+            <span class="col-count">{{ getTasksByStatus('ToDo').length }}</span>
           </div>
-          <h4 class="card-task-title">{{ t.title }}</h4>
-          <p class="card-desc">{{ t.description }}</p>
-
-          <div class="card-date-row" *ngIf="t.dueDate">
-            <span class="due-badge" [class.due-alert]="isOverdue(t.dueDate, t.status)">
-              <i class="fa-regular fa-clock"></i> {{ t.dueDate | date:'mediumDate' }}
-            </span>
-          </div>
-
-          <div class="card-bottom">
-            <div class="card-assignee">
-              <div class="avatar-tiny">{{ (t.assignedToUserName || '?').charAt(0) }}</div>
-              <span>{{ t.assignedToUserName || 'Unassigned' }}</span>
-            </div>
-            <div class="card-meta-right">
-              <span *ngIf="t.commentsCount > 0" class="comment-count-tag" title="Comments">
-                <i class="fa-regular fa-comment"></i> {{ t.commentsCount }}
-              </span>
-              <div class="status-shift-btns" (click)="$event.stopPropagation()">
-                <button class="shift-btn shift-back" title="Move back to To Do" (click)="moveStatus(t, 1)">
-                  <i class="fa-solid fa-arrow-left"></i>
-                </button>
-                <button class="shift-btn shift-done" title="Mark as Done" (click)="moveStatus(t, 3)">
-                  <span>Done</span> <i class="fa-solid fa-check"></i>
-                </button>
+          <div class="col-cards">
+            @for (task of getTasksByStatus('ToDo'); track task.id) {
+              <div 
+                class="kanban-card" 
+                draggable="true" 
+                (dragstart)="onDragStart($event, task)"
+                (click)="openDetailModal(task)"
+              >
+                <div class="card-top">
+                  <span class="card-category">{{ task.category || 'General' }}</span>
+                  <span class="card-priority" [class]="'p-' + task.priority.toLowerCase()">{{ task.priority }}</span>
+                </div>
+                <h3 class="card-title">{{ task.title }}</h3>
+                <div class="card-bottom">
+                  <span class="card-assignee">{{ task.assignedToUserName || 'Unassigned' }}</span>
+                  <div class="card-meta-icons">
+                    @if (task.subtasksCount > 0) {
+                      <span class="meta-pill" title="Subtasks">✓ {{ task.completedSubtasksCount }}/{{ task.subtasksCount }}</span>
+                    }
+                    @if (task.attachmentsCount > 0) {
+                      <span class="meta-pill" title="Attachments">📎 {{ task.attachmentsCount }}</span>
+                    }
+                    @if (task.commentsCount > 0) {
+                      <span class="meta-pill" title="Comments">💬 {{ task.commentsCount }}</span>
+                    }
+                  </div>
+                </div>
               </div>
-            </div>
+            }
           </div>
         </div>
 
-        <div *ngIf="getTasksByStatus('InProgress').length === 0" class="empty-col">
-          <i class="fa-solid fa-hourglass-empty"></i>
-          <p>No tasks In Progress</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Done Column -->
-    <div class="kanban-column column-done">
-      <div class="column-header">
-        <div class="col-title-wrap">
-          <span class="col-dot dot-done"></span>
-          <h4>Completed</h4>
-          <span class="col-count">{{ getTasksByStatus('Done').length }}</span>
-        </div>
-      </div>
-
-      <div class="kanban-cards-wrapper">
+        <!-- Column: IN PROGRESS -->
         <div 
-          *ngFor="let t of getTasksByStatus('Done')" 
-          class="kanban-card card-completed" 
-          (click)="openDetailModal(t)"
+          class="kanban-column" 
+          (dragover)="onDragOver($event)" 
+          (drop)="onDrop($event, 3)"
         >
-          <div class="card-top">
-            <span class="badge badge-done"><i class="fa-solid fa-check"></i> Done</span>
-            <span *ngIf="t.teamName" class="card-team-pill">{{ t.teamName }}</span>
+          <div class="col-header header-inprogress">
+            <span class="col-title">In Progress</span>
+            <span class="col-count">{{ getTasksByStatus('InProgress').length }}</span>
           </div>
-          <h4 class="card-task-title task-strike">{{ t.title }}</h4>
-          <p class="card-desc">{{ t.description }}</p>
-
-          <div class="card-bottom">
-            <div class="card-assignee">
-              <div class="avatar-tiny">{{ (t.assignedToUserName || '?').charAt(0) }}</div>
-              <span>{{ t.assignedToUserName || 'Unassigned' }}</span>
-            </div>
-            <div class="card-meta-right">
-              <div class="status-shift-btns" (click)="$event.stopPropagation()">
-                <button class="shift-btn shift-reopen" title="Reopen task (Move to In Progress)" (click)="moveStatus(t, 2)">
-                  <i class="fa-solid fa-rotate-left"></i> Reopen
-                </button>
+          <div class="col-cards">
+            @for (task of getTasksByStatus('InProgress'); track task.id) {
+              <div 
+                class="kanban-card" 
+                draggable="true" 
+                (dragstart)="onDragStart($event, task)"
+                (click)="openDetailModal(task)"
+              >
+                <div class="card-top">
+                  <span class="card-category">{{ task.category || 'General' }}</span>
+                  <span class="card-priority" [class]="'p-' + task.priority.toLowerCase()">{{ task.priority }}</span>
+                </div>
+                <h3 class="card-title">{{ task.title }}</h3>
+                <div class="card-bottom">
+                  <span class="card-assignee">{{ task.assignedToUserName || 'Unassigned' }}</span>
+                  <div class="card-meta-icons">
+                    @if (task.subtasksCount > 0) {
+                      <span class="meta-pill" title="Subtasks">✓ {{ task.completedSubtasksCount }}/{{ task.subtasksCount }}</span>
+                    }
+                    @if (task.attachmentsCount > 0) {
+                      <span class="meta-pill" title="Attachments">📎 {{ task.attachmentsCount }}</span>
+                    }
+                    @if (task.commentsCount > 0) {
+                      <span class="meta-pill" title="Comments">💬 {{ task.commentsCount }}</span>
+                    }
+                  </div>
+                </div>
               </div>
-            </div>
+            }
           </div>
         </div>
 
-        <div *ngIf="getTasksByStatus('Done').length === 0" class="empty-col">
-          <i class="fa-regular fa-square-check"></i>
-          <p>No completed tasks yet</p>
+        <!-- Column: REVIEW -->
+        <div 
+          class="kanban-column" 
+          (dragover)="onDragOver($event)" 
+          (drop)="onDrop($event, 4)"
+        >
+          <div class="col-header header-review">
+            <span class="col-title">Review</span>
+            <span class="col-count">{{ getTasksByStatus('Review').length }}</span>
+          </div>
+          <div class="col-cards">
+            @for (task of getTasksByStatus('Review'); track task.id) {
+              <div 
+                class="kanban-card" 
+                draggable="true" 
+                (dragstart)="onDragStart($event, task)"
+                (click)="openDetailModal(task)"
+              >
+                <div class="card-top">
+                  <span class="card-category">{{ task.category || 'General' }}</span>
+                  <span class="card-priority" [class]="'p-' + task.priority.toLowerCase()">{{ task.priority }}</span>
+                </div>
+                <h3 class="card-title">{{ task.title }}</h3>
+                <div class="card-bottom">
+                  <span class="card-assignee">{{ task.assignedToUserName || 'Unassigned' }}</span>
+                  <div class="card-meta-icons">
+                    @if (task.subtasksCount > 0) {
+                      <span class="meta-pill" title="Subtasks">✓ {{ task.completedSubtasksCount }}/{{ task.subtasksCount }}</span>
+                    }
+                    @if (task.attachmentsCount > 0) {
+                      <span class="meta-pill" title="Attachments">📎 {{ task.attachmentsCount }}</span>
+                    }
+                    @if (task.commentsCount > 0) {
+                      <span class="meta-pill" title="Comments">💬 {{ task.commentsCount }}</span>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Column: DONE -->
+        <div 
+          class="kanban-column" 
+          (dragover)="onDragOver($event)" 
+          (drop)="onDrop($event, 5)"
+        >
+          <div class="col-header header-done">
+            <span class="col-title">Done</span>
+            <span class="col-count">{{ getTasksByStatus('Done').length }}</span>
+          </div>
+          <div class="col-cards">
+            @for (task of getTasksByStatus('Done'); track task.id) {
+              <div 
+                class="kanban-card card-done" 
+                draggable="true" 
+                (dragstart)="onDragStart($event, task)"
+                (click)="openDetailModal(task)"
+              >
+                <div class="card-top">
+                  <span class="card-category">{{ task.category || 'General' }}</span>
+                  <span class="card-priority" [class]="'p-' + task.priority.toLowerCase()">{{ task.priority }}</span>
+                </div>
+                <h3 class="card-title">{{ task.title }}</h3>
+                <div class="card-bottom">
+                  <span class="card-assignee">{{ task.assignedToUserName || 'Unassigned' }}</span>
+                  <div class="card-meta-icons">
+                    @if (task.subtasksCount > 0) {
+                      <span class="meta-pill" title="Subtasks">✓ {{ task.completedSubtasksCount }}/{{ task.subtasksCount }}</span>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- 2. TABLE VIEW -->
-  <div *ngIf="!loading() && viewMode() === 'table'" class="card">
-    <div class="card-body" style="padding: 0;">
-      <div class="table-responsive">
-        <table class="custom-table" *ngIf="tasks().length > 0">
+    } @else {
+      <!-- DATA TABLE VIEW -->
+      <div class="table-card">
+        <table class="data-table">
           <thead>
             <tr>
-              <th>Task</th>
+              <th>ID</th>
+              <th>Task Summary</th>
               <th>Status</th>
               <th>Priority</th>
-              <th>Team</th>
+              <th>Department</th>
               <th>Assignee</th>
               <th>Due Date</th>
-              <!-- Administrator Audit Columns (Admin Only) -->
-              <th *ngIf="authService.isAdmin()">Created Date</th>
-              <th *ngIf="authService.isAdmin()">Remarks</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let t of tasks()">
-              <td>
-                <div class="table-task-cell" (click)="openDetailModal(t)" style="cursor: pointer;">
-                  <strong class="hover-primary">{{ t.title }}</strong>
-                  <small class="text-slate-500">{{ t.description | slice:0:60 }}{{ t.description.length > 60 ? '...' : '' }}</small>
-                </div>
-              </td>
-              <td>
-                <app-status-badge type="status" [value]="t.status" [size]="'sm'"></app-status-badge>
-              </td>
-              <td>
-                <app-status-badge type="priority" [value]="t.priority" [size]="'sm'"></app-status-badge>
-              </td>
-              <td>{{ t.teamName || 'General' }}</td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 0.375rem;">
-                  <div class="avatar-tiny">{{ (t.assignedToUserName || '?').charAt(0) }}</div>
-                  <span>{{ t.assignedToUserName || 'Unassigned' }}</span>
-                </div>
-              </td>
-              <td>
-                <span [class.text-danger]="isOverdue(t.dueDate, t.status)">
-                  {{ t.dueDate ? (t.dueDate | date:'mediumDate') : 'No date' }}
-                </span>
-              </td>
-              <!-- Admin Only Audit Columns -->
-              <td *ngIf="authService.isAdmin()">
-                <span class="text-slate-500 font-mono text-xs">{{ (t.createdDate || t.createdAt) | date:'shortDate' }}</span>
-              </td>
-              <td *ngIf="authService.isAdmin()">
-                <span class="remarks-tag" [title]="t.remarks || 'None'">{{ t.remarks || '—' }}</span>
-              </td>
-              <td>
-                <div class="table-action-btns">
-                  <button class="btn-icon" (click)="openDetailModal(t)" title="Comments & Details">
-                    <i class="fa-solid fa-comments"></i>
-                  </button>
-                  <button 
-                    *ngIf="authService.isManager()" 
-                    class="btn-icon" 
-                    (click)="openEditModal(t)" 
-                    title="Edit Task"
-                  >
-                    <i class="fa-solid fa-pen-to-square"></i>
-                  </button>
-                  <button 
-                    *ngIf="authService.isManager()" 
-                    class="btn-icon text-danger" 
-                    (click)="deleteTask(t.id)" 
-                    title="Delete Task"
-                  >
-                    <i class="fa-solid fa-trash"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
+            @for (task of tasks(); track task.id) {
+              <tr (click)="openDetailModal(task)">
+                <td><span class="task-id-badge">#{{ task.id }}</span></td>
+                <td>
+                  <div class="table-title">{{ task.title }}</div>
+                  <div class="table-sub">{{ task.category }}</div>
+                </td>
+                <td><app-status-badge [status]="task.status"></app-status-badge></td>
+                <td><span class="badge" [class]="'p-' + task.priority.toLowerCase()">{{ task.priority }}</span></td>
+                <td>{{ task.teamName || 'Cross-functional' }}</td>
+                <td>{{ task.assignedToUserName || 'Unassigned' }}</td>
+                <td>
+                  <span [class.text-danger]="isOverdue(task.dueDate, task.status)">
+                    {{ task.dueDate ? (task.dueDate | date:'mediumDate') : '—' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="row-actions" (click)="$event.stopPropagation()">
+                    @if (authService.isManager()) {
+                      <button class="action-btn" (click)="openEditModal(task, $event)" title="Edit">✏️</button>
+                      <button class="action-btn" (click)="deleteTask(task, $event)" title="Delete">🗑️</button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
           </tbody>
         </table>
-
-        <app-empty-state
-          *ngIf="tasks().length === 0"
-          icon="fa-solid fa-list-check"
-          title="No Tasks Found"
-          description="No tasks match the selected filter criteria or search query."
-          [actionLabel]="authService.isManager() ? 'Create New Task' : undefined"
-          actionIcon="fa-solid fa-plus"
-          (actionClicked)="openCreateModal()"
-        ></app-empty-state>
       </div>
-    </div>
-  </div>
-
-  <!-- Create / Edit Modal -->
-  <app-task-modal
-    *ngIf="showTaskModal()"
-    [task]="selectedTaskForEdit()"
-    (saved)="onTaskSaved()"
-    (cancelled)="showTaskModal.set(false)"
-  ></app-task-modal>
-
-  <!-- Task Details & Comments Modal -->
-  <app-task-detail-modal
-    *ngIf="showDetailModal() && selectedTaskForDetail()"
-    [task]="selectedTaskForDetail()!"
-    (statusChanged)="loadTasks()"
-    (closed)="showDetailModal.set(false)"
-  ></app-task-detail-modal>
+    }
+  }
 </div>
+
+@if (showTaskModal()) {
+  <app-task-modal
+    [task]="selectedTaskForEdit()"
+    (close)="showTaskModal.set(false)"
+    (saved)="loadTasks()"
+  ></app-task-modal>
+}
+
+@if (showDetailModal() && selectedTaskForDetail()) {
+  <app-task-detail-modal
+    [task]="selectedTaskForDetail()!"
+    (close)="showDetailModal.set(false)"
+    (statusChanged)="loadTasks()"
+    (taskUpdated)="loadTasks()"
+  ></app-task-detail-modal>
+}

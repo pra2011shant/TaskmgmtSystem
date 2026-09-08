@@ -47,6 +47,7 @@ export class TaskListComponent implements OnInit {
   search = '';
   statusFilter: number | null = null;
   priorityFilter: number | null = null;
+  categoryFilter = '';
   teamFilter: number | null = null;
   isOverdueOnly = false;
 
@@ -59,6 +60,9 @@ export class TaskListComponent implements OnInit {
   showDetailModal = signal(false);
   selectedTaskForDetail = signal<TaskItem | null>(null);
 
+  // Drag-and-drop tracking
+  draggedTask = signal<TaskItem | null>(null);
+
   ngOnInit() {
     this.teamService.getTeams().subscribe(res => this.teams.set(res));
     this.loadTasks();
@@ -70,6 +74,7 @@ export class TaskListComponent implements OnInit {
       search: this.search || undefined,
       status: this.statusFilter !== null ? this.statusFilter : undefined,
       priority: this.priorityFilter !== null ? this.priorityFilter : undefined,
+      category: this.categoryFilter || undefined,
       teamId: this.teamFilter !== null ? this.teamFilter : undefined,
       isOverdue: this.isOverdueOnly ? true : undefined
     };
@@ -98,18 +103,16 @@ export class TaskListComponent implements OnInit {
     if (chip === 'my') {
       const currentUserId = this.authService.currentUser()?.id;
       this.loading.set(true);
-      this.taskService.getTasks().subscribe({
+      this.taskService.getTasks({ assignedToUserId: currentUserId }).subscribe({
         next: (res) => {
-          this.tasks.set(res.filter(t => t.assignedToUserId === currentUserId));
+          this.tasks.set(res);
           this.loading.set(false);
-        },
-        error: () => this.loading.set(false)
+        }
       });
       return;
     }
     if (chip === 'urgent') {
       this.priorityFilter = 4;
-      this.isOverdueOnly = false;
       this.loadTasks();
       return;
     }
@@ -121,32 +124,58 @@ export class TaskListComponent implements OnInit {
   }
 
   resetFilters() {
-    this.quickChip.set('all');
     this.search = '';
     this.statusFilter = null;
     this.priorityFilter = null;
+    this.categoryFilter = '';
     this.teamFilter = null;
     this.isOverdueOnly = false;
+    this.quickChip.set('all');
     this.loadTasks();
   }
 
-  isOverdue(dueDate?: string, status?: string): boolean {
-    if (!dueDate || status === 'Done') return false;
-    return new Date(dueDate) < new Date();
+  getTasksByStatus(status: 'ToDo' | 'InProgress' | 'Review' | 'Done'): TaskItem[] {
+    return this.tasks().filter(t => {
+      if (status === 'ToDo') return t.status === 'ToDo' || t.status === 'Created' || t.status === 'Assigned';
+      return t.status === status;
+    });
   }
 
-  getTasksByStatus(status: 'ToDo' | 'InProgress' | 'Done'): TaskItem[] {
-    return this.tasks().filter(t => t.status === status);
+  // Drag and Drop
+  onDragStart(event: DragEvent, task: TaskItem) {
+    this.draggedTask.set(task);
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', task.id.toString());
+    }
   }
 
-  moveStatus(task: TaskItem, newStatusVal: number) {
-    this.taskService.updateTaskStatus(task.id, newStatusVal).subscribe({
+  onDragOver(event: DragEvent) {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  onDrop(event: DragEvent, targetStatusValue: number) {
+    event.preventDefault();
+    const task = this.draggedTask();
+    if (!task) return;
+
+    if (task.statusValue === targetStatusValue) {
+      this.draggedTask.set(null);
+      return;
+    }
+
+    this.taskService.updateTaskStatus(task.id, targetStatusValue).subscribe({
       next: () => {
-        this.toast.success(`Task moved!`);
+        this.toast.success(`Task moved.`);
+        this.draggedTask.set(null);
         this.loadTasks();
       },
       error: (err) => {
         this.toast.error(err.error?.message || 'Failed to update status.');
+        this.draggedTask.set(null);
       }
     });
   }
@@ -156,7 +185,8 @@ export class TaskListComponent implements OnInit {
     this.showTaskModal.set(true);
   }
 
-  openEditModal(task: TaskItem) {
+  openEditModal(task: TaskItem, event?: Event) {
+    if (event) event.stopPropagation();
     this.selectedTaskForEdit.set(task);
     this.showTaskModal.set(true);
   }
@@ -166,22 +196,21 @@ export class TaskListComponent implements OnInit {
     this.showDetailModal.set(true);
   }
 
-  onTaskSaved() {
-    this.showTaskModal.set(false);
-    this.loadTasks();
-  }
-
-  deleteTask(id: number) {
-    if (confirm('Are you sure you want to delete this task?')) {
-      this.taskService.deleteTask(id).subscribe({
+  deleteTask(task: TaskItem, event?: Event) {
+    if (event) event.stopPropagation();
+    if (confirm(`Are you sure you want to delete "${task.title}"?`)) {
+      this.taskService.deleteTask(task.id).subscribe({
         next: () => {
           this.toast.success('Task deleted.');
           this.loadTasks();
         },
-        error: (err) => {
-          this.toast.error(err.error?.message || 'Failed to delete task.');
-        }
+        error: (err) => this.toast.error(err.error?.message || 'Failed to delete task.')
       });
     }
+  }
+
+  isOverdue(dueDate?: string, status?: string): boolean {
+    if (!dueDate || status === 'Done') return false;
+    return new Date(dueDate) < new Date();
   }
 }

@@ -1,0 +1,96 @@
+<div class="calendar-page">
+  <div class="calendar-topbar">
+    <div class="header-titles">
+      <h1 class="page-title">Deliverables & Deadline Calendar</h1>
+      <p class="page-subtitle">Track project schedules, sprint milestones, and upcoming deadlines</p>
+    </div>
+
+    <div class="calendar-controls">
+      <button class="ctrl-btn" (click)="prevMonth()" title="Previous Month">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+
+      <span class="current-month-label">
+        {{ currentMonthDate() | date:'MMMM yyyy' }}
+      </span>
+
+      <button class="ctrl-btn" (click)="nextMonth()" title="Next Month">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+
+      <button class="today-btn" (click)="goToToday()">Today</button>
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="calendar-loading">
+      <div class="spinner"></div>
+      <span>Loading calendar schedule...</span>
+    </div>
+  } @else {
+    <div class="calendar-container">
+      <div class="calendar-weekdays">
+        @for (day of weekDays; track day) {
+          <div class="weekday-cell">{{ day }}</div>
+        }
+      </div>
+
+      <div class="calendar-grid">
+        @for (cell of calendarDays(); track cell.date.getTime()) {
+          <div 
+            class="day-cell" 
+            [class.other-month]="!cell.isCurrentMonth"
+            [class.today]="cell.isToday"
+            (dblclick)="openCreateTaskOnDate(cell.date)"
+          >
+            <div class="day-header">
+              <span class="day-number">{{ cell.date | date:'d' }}</span>
+              <button class="quick-add-btn" (click)="openCreateTaskOnDate(cell.date)" title="Add task on this day">+</button>
+            </div>
+
+            <div class="day-tasks-list">
+              @for (task of cell.tasks; track task.id) {
+                <div 
+                  class="calendar-task-chip" 
+                  [class.priority-critical]="task.priority === 'Critical' || task.priority === 'Urgent'"
+                  [class.priority-high]="task.priority === 'High'"
+                  [class.priority-medium]="task.priority === 'Medium'"
+                  [class.priority-low]="task.priority === 'Low'"
+                  [class.status-done]="task.status === 'Done'"
+                  (click)="openTaskDetail(task)"
+                  title="{{ task.title }} ({{ task.priority }} | {{ task.status }})"
+                >
+                  <span class="chip-title">{{ task.title }}</span>
+                  @if (task.subtasksCount > 0) {
+                    <span class="chip-subtasks">{{ task.completedSubtasksCount }}/{{ task.subtasksCount }}</span>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>
+
+@if (selectedTask()) {
+  <app-task-detail-modal
+    [task]="selectedTask()!"
+    (close)="selectedTask.set(null)"
+    (taskUpdated)="loadTasks()"
+  ></app-task-detail-modal>
+}
+
+@if (showTaskModal()) {
+  <app-task-modal
+    [task]="taskToEdit()"
+    [defaultDueDate]="selectedDateForNewTask()"
+    (close)="showTaskModal.set(false)"
+    (saved)="handleTaskSaved($event)"
+  ></app-task-modal>
+}

@@ -1,14 +1,15 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ToastService } from '../../core/services/toast.service';
+import { GlobalSearchModalComponent } from '../search/global-search-modal.component';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, GlobalSearchModalComponent],
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.css'
 })
@@ -20,6 +21,15 @@ export class NavbarComponent {
 
   isNotifOpen = signal<boolean>(false);
   isPersonaOpen = signal<boolean>(false);
+  showSearchModal = signal<boolean>(false);
+
+  @HostListener('window:keydown', ['$event'])
+  handleKeyDown(event: KeyboardEvent) {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      this.showSearchModal.set(true);
+    }
+  }
 
   toggleNotifDropdown() {
     this.isNotifOpen.update(v => !v);
@@ -44,10 +54,9 @@ export class NavbarComponent {
 
   switchPersona(email: string, pass: string, roleName: string) {
     this.authService.login({ email, password: pass }).subscribe({
-      next: (res) => {
+      next: () => {
         this.isPersonaOpen.set(false);
         this.toast.success(`Active persona switched to ${roleName}!`);
-        // Reload location to trigger re-fetching across all components cleanly
         window.location.reload();
       },
       error: () => {

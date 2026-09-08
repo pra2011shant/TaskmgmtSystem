@@ -10,7 +10,7 @@ namespace ManagementSystem.Data
     public static class DbInitializer
     {
         /// <summary>
-        /// Seeds administrator accounts, departments, sample tasks, and system alerts upon first startup.
+        /// Seeds administrator accounts, departments, sample tasks, subtasks, permissions and system alerts upon first startup.
         /// </summary>
         public static async Task InitializeAsync(AppDbContext context, ILogger logger)
         {
@@ -18,6 +18,36 @@ namespace ManagementSystem.Data
             {
                 // Ensure relational schema exists
                 await context.Database.EnsureCreatedAsync();
+
+                // Seed Role Permissions if not present
+                if (!await context.RolePermissions.AnyAsync())
+                {
+                    var managerPerms = new[]
+                    {
+                        AppPermissions.TaskCreate, AppPermissions.TaskView, AppPermissions.TaskEdit,
+                        AppPermissions.TaskAssign, AppPermissions.TaskChangeStatus,
+                        AppPermissions.TeamView, AppPermissions.TeamEdit, AppPermissions.TeamManageMembers,
+                        AppPermissions.UserView, AppPermissions.ReportsExport
+                    };
+
+                    foreach (var p in managerPerms)
+                    {
+                        context.RolePermissions.Add(new RolePermission { Role = UserRole.Manager, Permission = p, IsGranted = true });
+                    }
+
+                    var userPerms = new[]
+                    {
+                        AppPermissions.TaskView, AppPermissions.TaskChangeStatus,
+                        AppPermissions.TeamView, AppPermissions.UserView
+                    };
+
+                    foreach (var p in userPerms)
+                    {
+                        context.RolePermissions.Add(new RolePermission { Role = UserRole.User, Permission = p, IsGranted = true });
+                    }
+
+                    await context.SaveChangesAsync();
+                }
 
                 // Skip seeding if database already contains users
                 if (await context.Users.AnyAsync())
@@ -36,6 +66,7 @@ namespace ManagementSystem.Data
                     Email = "admin@system.com",
                     PasswordHash = PasswordHasher.HashPassword("Admin@123"),
                     Role = UserRole.Admin,
+                    Department = "Executive IT",
                     Status = 1,
                     IsDeleted = false,
                     CreatedDate = DateTime.UtcNow
@@ -47,6 +78,7 @@ namespace ManagementSystem.Data
                     Email = "manager@system.com",
                     PasswordHash = PasswordHasher.HashPassword("Manager@123"),
                     Role = UserRole.Manager,
+                    Department = "Engineering",
                     Status = 1,
                     IsDeleted = false,
                     CreatedDate = DateTime.UtcNow
@@ -58,6 +90,7 @@ namespace ManagementSystem.Data
                     Email = "rahul@system.com",
                     PasswordHash = PasswordHasher.HashPassword("User@123"),
                     Role = UserRole.User,
+                    Department = "Engineering",
                     Status = 1,
                     IsDeleted = false,
                     CreatedDate = DateTime.UtcNow
@@ -69,6 +102,7 @@ namespace ManagementSystem.Data
                     Email = "priya@system.com",
                     PasswordHash = PasswordHasher.HashPassword("User@123"),
                     Role = UserRole.User,
+                    Department = "Design",
                     Status = 1,
                     IsDeleted = false,
                     CreatedDate = DateTime.UtcNow
@@ -80,6 +114,7 @@ namespace ManagementSystem.Data
                     Email = "user@system.com",
                     PasswordHash = PasswordHasher.HashPassword("User@123"),
                     Role = UserRole.User,
+                    Department = "Quality Assurance",
                     Status = 1,
                     IsDeleted = false,
                     CreatedDate = DateTime.UtcNow
@@ -98,100 +133,111 @@ namespace ManagementSystem.Data
                     ManagerId = manager.Id,
                     Status = 1,
                     IsDeleted = false,
+                    CreatedById = admin.Id,
                     CreatedDate = DateTime.UtcNow
                 };
 
                 var designTeam = new Team
                 {
-                    Name = "UI/UX & Design Systems",
-                    Description = "Responsive web interfaces, Figma design systems, and user experience telemetry.",
+                    Name = "UI/UX & Product Design",
+                    Description = "Design systems, interactive prototypes, and accessible user experiences.",
                     ManagerId = manager.Id,
                     Status = 1,
                     IsDeleted = false,
+                    CreatedById = admin.Id,
                     CreatedDate = DateTime.UtcNow
                 };
 
-                context.Teams.AddRange(engineeringTeam, designTeam);
-                await context.SaveChangesAsync();
-
-                // =====================================================================
-                // 3. TEAM MEMBERSHIP ROSTERS
-                // =====================================================================
-                var teamMembers = new List<TeamMember>
+                var qaTeam = new Team
                 {
-                    new TeamMember { TeamId = engineeringTeam.Id, UserId = user1.Id, Status = 1, IsDeleted = false, CreatedDate = DateTime.UtcNow },
-                    new TeamMember { TeamId = engineeringTeam.Id, UserId = user3.Id, Status = 1, IsDeleted = false, CreatedDate = DateTime.UtcNow },
-                    new TeamMember { TeamId = designTeam.Id, UserId = user2.Id, Status = 1, IsDeleted = false, CreatedDate = DateTime.UtcNow }
+                    Name = "Quality Assurance & DevOps",
+                    Description = "Automated integration pipelines, load testing, and release certification.",
+                    ManagerId = manager.Id,
+                    Status = 1,
+                    IsDeleted = false,
+                    CreatedById = admin.Id,
+                    CreatedDate = DateTime.UtcNow
                 };
 
-                context.TeamMembers.AddRange(teamMembers);
+                context.Teams.AddRange(engineeringTeam, designTeam, qaTeam);
                 await context.SaveChangesAsync();
 
                 // =====================================================================
-                // 4. SAMPLE WORK TASKS
+                // 3. TEAM MEMBERSHIP ASSOCIATIONS
+                // =====================================================================
+                context.TeamMembers.AddRange(
+                    new TeamMember { TeamId = engineeringTeam.Id, UserId = user1.Id, CreatedById = admin.Id, CreatedDate = DateTime.UtcNow },
+                    new TeamMember { TeamId = designTeam.Id, UserId = user2.Id, CreatedById = admin.Id, CreatedDate = DateTime.UtcNow },
+                    new TeamMember { TeamId = qaTeam.Id, UserId = user3.Id, CreatedById = admin.Id, CreatedDate = DateTime.UtcNow }
+                );
+                await context.SaveChangesAsync();
+
+                // =====================================================================
+                // 4. SEED SAMPLE TASKS & SUBTASKS
                 // =====================================================================
                 var task1 = new TaskItem
                 {
-                    Title = "Build ASP.NET Core REST API Endpoints",
-                    Description = "Implement secure JWT authentication, RBAC authorization, and Entity Framework Core repositories.",
+                    Title = "Implement JWT & Refresh Token Authentication",
+                    Description = "Configure ASP.NET Core JWT bearer authentication with silent refresh token rotation and BCrypt hashing.",
                     Status = TaskStatusEnum.InProgress,
-                    Priority = TaskPriorityEnum.High,
-                    DueDate = DateTime.UtcNow.AddDays(3),
+                    Priority = TaskPriorityEnum.Critical,
+                    Category = "Backend & Security",
+                    Tags = "security,jwt,auth,api",
+                    EstimatedHours = 12.0,
+                    ActualHours = 8.5,
+                    DueDate = DateTime.UtcNow.AddDays(2),
                     TeamId = engineeringTeam.Id,
                     AssignedToUserId = user1.Id,
                     CreatedById = manager.Id,
-                    IsDeleted = false,
-                    CreatedDate = DateTime.UtcNow.AddDays(-2)
+                    CreatedDate = DateTime.UtcNow.AddDays(-3)
                 };
 
                 var task2 = new TaskItem
                 {
-                    Title = "Design Responsive Glassmorphic Dashboard",
-                    Description = "Create clean and accessible UI components with responsive grid, charts, and dark/light themes.",
-                    Status = TaskStatusEnum.InProgress,
-                    Priority = TaskPriorityEnum.Urgent,
-                    DueDate = DateTime.UtcNow.AddDays(2),
+                    Title = "Design Interactive Kanban Board UI",
+                    Description = "Create modern drag-and-drop Kanban workflow columns with rich card badges, avatars, and animations.",
+                    Status = TaskStatusEnum.Review,
+                    Priority = TaskPriorityEnum.High,
+                    Category = "Frontend Design",
+                    Tags = "kanban,ui,angular,signals",
+                    EstimatedHours = 16.0,
+                    ActualHours = 14.0,
+                    DueDate = DateTime.UtcNow.AddDays(1),
                     TeamId = designTeam.Id,
                     AssignedToUserId = user2.Id,
                     CreatedById = manager.Id,
-                    IsDeleted = false,
-                    CreatedDate = DateTime.UtcNow.AddDays(-1)
+                    CreatedDate = DateTime.UtcNow.AddDays(-4)
                 };
 
                 var task3 = new TaskItem
                 {
-                    Title = "Write Unit & Integration Tests",
-                    Description = "Verify authentication flows, task status transition, and role permission checks.",
+                    Title = "Setup Automated CI/CD Pipeline with GitHub Actions",
+                    Description = "Configure continuous integration to compile .NET API, build Angular artifacts, and execute unit test suite.",
                     Status = TaskStatusEnum.ToDo,
                     Priority = TaskPriorityEnum.Medium,
-                    DueDate = DateTime.UtcNow.AddDays(7),
-                    TeamId = engineeringTeam.Id,
+                    Category = "DevOps & Cloud",
+                    Tags = "cicd,github-actions,devops",
+                    EstimatedHours = 8.0,
+                    ActualHours = 0.0,
+                    DueDate = DateTime.UtcNow.AddDays(5),
+                    TeamId = qaTeam.Id,
                     AssignedToUserId = user3.Id,
                     CreatedById = admin.Id,
-                    IsDeleted = false,
-                    CreatedDate = DateTime.UtcNow
+                    CreatedDate = DateTime.UtcNow.AddDays(-1)
                 };
 
-                var task4 = new TaskItem
-                {
-                    Title = "Setup CI/CD Pipeline & Docker Architecture",
-                    Description = "Configure multi-stage Dockerfiles and GitHub Actions workflow for automated testing.",
-                    Status = TaskStatusEnum.Done,
-                    Priority = TaskPriorityEnum.Low,
-                    DueDate = DateTime.UtcNow.AddDays(-1),
-                    TeamId = engineeringTeam.Id,
-                    AssignedToUserId = user1.Id,
-                    CreatedById = admin.Id,
-                    IsDeleted = false,
-                    CreatedDate = DateTime.UtcNow.AddDays(-5),
-                    LastUpdatedDate = DateTime.UtcNow.AddDays(-1)
-                };
-
-                context.Tasks.AddRange(task1, task2, task3, task4);
+                context.Tasks.AddRange(task1, task2, task3);
                 await context.SaveChangesAsync();
 
+                // Subtasks for Task 1
+                context.SubTasks.AddRange(
+                    new SubTask { TaskId = task1.Id, Title = "Create RefreshToken entity and migration", IsCompleted = true, SortOrder = 1, CreatedDate = DateTime.UtcNow },
+                    new SubTask { TaskId = task1.Id, Title = "Implement token refresh endpoint in AuthController", IsCompleted = true, SortOrder = 2, CreatedDate = DateTime.UtcNow },
+                    new SubTask { TaskId = task1.Id, Title = "Add Angular HTTP interceptor silent refresh", IsCompleted = false, SortOrder = 3, CreatedDate = DateTime.UtcNow }
+                );
+
                 // =====================================================================
-                // 5. SAMPLE COLLABORATION COMMENTS
+                // 5. DISCUSSION COMMENTS
                 // =====================================================================
                 var comment1 = new TaskComment
                 {
@@ -207,7 +253,7 @@ namespace ManagementSystem.Data
                 {
                     TaskId = task1.Id,
                     UserId = manager.Id,
-                    Content = "Excellent progress! Ensure CORS headers and rate limiting middleware are validated.",
+                    Content = "@Rahul Excellent progress! Ensure CORS headers and rate limiting middleware are validated.",
                     Status = 1,
                     IsDeleted = false,
                     CreatedDate = DateTime.UtcNow.AddHours(-2)

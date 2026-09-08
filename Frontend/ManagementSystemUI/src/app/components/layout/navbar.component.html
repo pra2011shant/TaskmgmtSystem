@@ -16,7 +16,17 @@
   </div>
 
   <div class="navbar-right">
-    <!-- Quick Role Switcher Dropdown (User Defined Persona Switcher) -->
+    <!-- Global Universal Search Trigger -->
+    <button class="nav-search-btn" (click)="showSearchModal.set(true)" title="Search workspace (Ctrl+K)">
+      <svg class="search-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <span class="search-txt">Search workspace...</span>
+      <kbd>Ctrl K</kbd>
+    </button>
+
+    <!-- Quick Role Switcher Dropdown -->
     <div class="persona-dropdown-wrap">
       <button class="persona-switch-btn" (click)="togglePersonaDropdown()" title="Switch Persona / Role">
         <i class="fa-solid fa-wand-magic-sparkles"></i>
@@ -103,50 +113,49 @@
         </span>
       </button>
 
-      <!-- Dropdown Popover -->
-      <div class="notif-popover" *ngIf="isNotifOpen()">
-        <div class="notif-popover-header">
-          <h3>Notifications</h3>
-          <button class="btn-text" (click)="notificationService.markAllAsRead().subscribe()">Mark all read</button>
+      <div class="notif-dropdown" *ngIf="isNotifOpen()">
+        <div class="notif-header">
+          <span class="notif-title">Notifications</span>
+          <a routerLink="/notifications" class="view-all-link" (click)="isNotifOpen.set(false)">View All</a>
         </div>
         <div class="notif-list">
           <div 
-            *ngFor="let n of notificationService.notifications().slice(0, 6)" 
             class="notif-item" 
-            [class.unread]="!n.isRead"
-            (click)="markRead(n.id)"
+            *ngFor="let notif of notificationService.notifications().slice(0, 5)"
+            [class.unread]="!notif.isRead"
+            (click)="markRead(notif.id)"
           >
-            <div class="notif-icon-circle">
-              <i *ngIf="n.type === 'TaskAssigned'" class="fa-solid fa-user-plus text-primary"></i>
-              <i *ngIf="n.type === 'StatusUpdated'" class="fa-solid fa-arrows-rotate text-info"></i>
-              <i *ngIf="n.type === 'CommentAdded'" class="fa-solid fa-comment-dots text-warning"></i>
-            </div>
-            <div class="notif-text">
-              <h5>{{ n.title }}</h5>
-              <p>{{ n.message }}</p>
-              <span class="time">{{ n.createdAt | date:'shortTime' }}</span>
+            <div class="notif-content">
+              <div class="notif-item-title">{{ notif.title }}</div>
+              <div class="notif-item-msg">{{ notif.message }}</div>
+              <div class="notif-item-time">{{ notif.createdAt | date:'shortTime' }}</div>
             </div>
           </div>
-          <div *ngIf="notificationService.notifications().length === 0" class="notif-empty">
-            <i class="fa-regular fa-bell-slash"></i>
-            <p>No notifications yet</p>
+          <div class="notif-empty" *ngIf="notificationService.notifications().length === 0">
+            No notifications right now
           </div>
-        </div>
-        <div class="notif-popover-footer">
-          <a routerLink="/notifications" (click)="isNotifOpen.set(false)">View all notifications</a>
         </div>
       </div>
     </div>
 
     <!-- User Profile Pill -->
     <div class="user-pill">
-      <div class="avatar-small">
-        {{ authService.currentUser()?.fullName?.charAt(0) }}
+      <div class="user-avatar">
+        {{ authService.currentUser()?.fullName?.charAt(0) || 'U' }}
       </div>
-      <div class="user-meta">
+      <div class="user-info">
         <span class="user-name">{{ authService.currentUser()?.fullName }}</span>
-        <span class="user-role-text">{{ authService.userRole() }}</span>
+        <span class="user-role">{{ authService.currentUser()?.role }}</span>
       </div>
     </div>
+
+    <!-- Logout -->
+    <button class="logout-btn" (click)="authService.logout()" title="Sign Out">
+      <i class="fa-solid fa-arrow-right-from-bracket"></i>
+    </button>
   </div>
 </header>
+
+@if (showSearchModal()) {
+  <app-global-search-modal (close)="showSearchModal.set(false)"></app-global-search-modal>
+}

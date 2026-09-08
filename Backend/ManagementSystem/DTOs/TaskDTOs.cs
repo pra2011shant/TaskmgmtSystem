@@ -3,6 +3,46 @@ using ManagementSystem.Models;
 
 namespace ManagementSystem.DTOs
 {
+    public class SubTaskDto
+    {
+        public int Id { get; set; }
+        public int TaskId { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public bool IsCompleted { get; set; }
+        public int SortOrder { get; set; }
+        public DateTime CreatedDate { get; set; }
+    }
+
+    public class CreateSubTaskDto
+    {
+        [Required]
+        [MaxLength(250)]
+        public string Title { get; set; } = string.Empty;
+        public int SortOrder { get; set; } = 0;
+    }
+
+    public class UpdateSubTaskDto
+    {
+        [Required]
+        [MaxLength(250)]
+        public string Title { get; set; } = string.Empty;
+        public bool IsCompleted { get; set; }
+        public int SortOrder { get; set; }
+    }
+
+    public class TaskAttachmentDto
+    {
+        public int Id { get; set; }
+        public int TaskId { get; set; }
+        public string FileName { get; set; } = string.Empty;
+        public string ContentType { get; set; } = string.Empty;
+        public long FileSize { get; set; }
+        public int UploadedById { get; set; }
+        public string UploadedByUserName { get; set; } = string.Empty;
+        public DateTime CreatedDate { get; set; }
+        public string DownloadUrl { get; set; } = string.Empty;
+    }
+
     /// <summary>
     /// Request payload for provisioning a new work task.
     /// </summary>
@@ -12,12 +52,22 @@ namespace ManagementSystem.DTOs
         [MaxLength(200)]
         public string Title { get; set; } = string.Empty;
 
-        [MaxLength(2000)]
+        [MaxLength(4000)]
         public string Description { get; set; } = string.Empty;
 
         public TaskStatusEnum Status { get; set; } = TaskStatusEnum.ToDo;
 
         public TaskPriorityEnum Priority { get; set; } = TaskPriorityEnum.Medium;
+
+        [MaxLength(100)]
+        public string? Category { get; set; } = "General";
+
+        [MaxLength(500)]
+        public string? Tags { get; set; }
+
+        public double? EstimatedHours { get; set; }
+
+        public double? ActualHours { get; set; }
 
         public DateTime? DueDate { get; set; }
 
@@ -27,6 +77,8 @@ namespace ManagementSystem.DTOs
 
         [MaxLength(500)]
         public string? Remarks { get; set; }
+
+        public List<string>? InitialSubtasks { get; set; }
     }
 
     /// <summary>
@@ -38,12 +90,22 @@ namespace ManagementSystem.DTOs
         [MaxLength(200)]
         public string Title { get; set; } = string.Empty;
 
-        [MaxLength(2000)]
+        [MaxLength(4000)]
         public string Description { get; set; } = string.Empty;
 
         public TaskStatusEnum Status { get; set; }
 
         public TaskPriorityEnum Priority { get; set; }
+
+        [MaxLength(100)]
+        public string? Category { get; set; }
+
+        [MaxLength(500)]
+        public string? Tags { get; set; }
+
+        public double? EstimatedHours { get; set; }
+
+        public double? ActualHours { get; set; }
 
         public DateTime? DueDate { get; set; }
 
@@ -76,6 +138,10 @@ namespace ManagementSystem.DTOs
         public int StatusValue { get; set; }
         public string Priority { get; set; } = string.Empty;
         public int PriorityValue { get; set; }
+        public string Category { get; set; } = "General";
+        public string? Tags { get; set; }
+        public double? EstimatedHours { get; set; }
+        public double? ActualHours { get; set; }
         public DateTime? DueDate { get; set; }
         public int? TeamId { get; set; }
         public string? TeamName { get; set; }
@@ -87,11 +153,16 @@ namespace ManagementSystem.DTOs
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public int CommentsCount { get; set; }
+        public int SubtasksCount { get; set; }
+        public int CompletedSubtasksCount { get; set; }
+        public int AttachmentsCount { get; set; }
         public string? Remarks { get; set; }
         public bool IsDeleted { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? LastUpdatedDate { get; set; }
         public int? CreatedById { get; set; }
+        public List<SubTaskDto> SubTasks { get; set; } = new List<SubTaskDto>();
+        public List<TaskAttachmentDto> Attachments { get; set; } = new List<TaskAttachmentDto>();
     }
 
     /// <summary>
@@ -102,8 +173,16 @@ namespace ManagementSystem.DTOs
         public string? Search { get; set; }
         public TaskStatusEnum? Status { get; set; }
         public TaskPriorityEnum? Priority { get; set; }
+        public string? Category { get; set; }
+        public string? Tag { get; set; }
         public int? TeamId { get; set; }
         public int? AssignedToUserId { get; set; }
         public bool? IsOverdue { get; set; }
+        public DateTime? DueDateFrom { get; set; }
+        public DateTime? DueDateTo { get; set; }
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 50;
+        public string? SortBy { get; set; }
+        public bool SortDescending { get; set; } = false;
     }
 }

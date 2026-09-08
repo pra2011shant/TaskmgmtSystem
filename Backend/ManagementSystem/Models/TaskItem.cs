@@ -5,9 +5,15 @@ namespace ManagementSystem.Models
 {
     public enum TaskStatusEnum
     {
-        ToDo = 1,
-        InProgress = 2,
-        Done = 3
+        Created = 0,
+        Assigned = 1,
+        ToDo = 2,
+        InProgress = 3,
+        Review = 4,
+        Done = 5,
+        Blocked = 6,
+        Rejected = 7,
+        Cancelled = 8
     }
 
     public enum TaskPriorityEnum
@@ -15,6 +21,7 @@ namespace ManagementSystem.Models
         Low = 1,
         Medium = 2,
         High = 3,
+        Critical = 4,
         Urgent = 4
     }
 
@@ -27,12 +34,22 @@ namespace ManagementSystem.Models
         [MaxLength(200)]
         public string Title { get; set; } = string.Empty;
 
-        [MaxLength(2000)]
+        [MaxLength(4000)]
         public string Description { get; set; } = string.Empty;
 
         public new TaskStatusEnum Status { get; set; } = TaskStatusEnum.ToDo;
 
         public TaskPriorityEnum Priority { get; set; } = TaskPriorityEnum.Medium;
+
+        [MaxLength(100)]
+        public string? Category { get; set; } = "General";
+
+        [MaxLength(500)]
+        public string? Tags { get; set; }
+
+        public double? EstimatedHours { get; set; }
+
+        public double? ActualHours { get; set; }
 
         public DateTime? DueDate { get; set; }
 
@@ -71,5 +88,7 @@ namespace ManagementSystem.Models
         }
 
         public ICollection<TaskComment> Comments { get; set; } = new List<TaskComment>();
+        public ICollection<SubTask> SubTasks { get; set; } = new List<SubTask>();
+        public ICollection<TaskAttachment> Attachments { get; set; } = new List<TaskAttachment>();
     }
 }

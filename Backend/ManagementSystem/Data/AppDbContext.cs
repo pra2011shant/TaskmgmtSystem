@@ -22,6 +22,11 @@ namespace ManagementSystem.Data
         public DbSet<TaskItem> Tasks => Set<TaskItem>();
         public DbSet<TaskComment> Comments => Set<TaskComment>();
         public DbSet<Notification> Notifications => Set<Notification>();
+        public DbSet<SubTask> SubTasks => Set<SubTask>();
+        public DbSet<TaskAttachment> TaskAttachments => Set<TaskAttachment>();
+        public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+        public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+        public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
 
         /// <summary>
         /// Configures database schema constraints, foreign key cascades, unique indexes,
@@ -31,7 +36,7 @@ namespace ManagementSystem.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // 1. User Entity: Unique email constraint and active record index
+            // 1. User Entity
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
@@ -39,7 +44,7 @@ namespace ManagementSystem.Data
             modelBuilder.Entity<User>()
                 .HasQueryFilter(u => !u.IsDeleted);
 
-            // 2. Team Entity: Team -> Manager association (1:N)
+            // 2. Team Entity
             modelBuilder.Entity<Team>()
                 .HasOne(t => t.Manager)
                 .WithMany(u => u.ManagedTeams)
@@ -49,7 +54,7 @@ namespace ManagementSystem.Data
             modelBuilder.Entity<Team>()
                 .HasQueryFilter(t => !t.IsDeleted);
 
-            // 3. TeamMember Entity: Composite uniqueness to prevent duplicate membership
+            // 3. TeamMember Entity
             modelBuilder.Entity<TeamMember>()
                 .HasIndex(tm => new { tm.TeamId, tm.UserId })
                 .IsUnique();
@@ -69,7 +74,7 @@ namespace ManagementSystem.Data
             modelBuilder.Entity<TeamMember>()
                 .HasQueryFilter(tm => !tm.IsDeleted);
 
-            // 4. TaskItem Entity: Relationships with Team, Assignee, and Creator
+            // 4. TaskItem Entity
             modelBuilder.Entity<TaskItem>()
                 .HasOne(t => t.Team)
                 .WithMany(tm => tm.Tasks)
@@ -91,7 +96,33 @@ namespace ManagementSystem.Data
             modelBuilder.Entity<TaskItem>()
                 .HasQueryFilter(t => !t.IsDeleted);
 
-            // 5. TaskComment Entity: Cascade delete with Task, restrict with User
+            // 5. SubTask Entity
+            modelBuilder.Entity<SubTask>()
+                .HasOne(st => st.Task)
+                .WithMany(t => t.SubTasks)
+                .HasForeignKey(st => st.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SubTask>()
+                .HasQueryFilter(st => !st.IsDeleted);
+
+            // 6. TaskAttachment Entity
+            modelBuilder.Entity<TaskAttachment>()
+                .HasOne(ta => ta.Task)
+                .WithMany(t => t.Attachments)
+                .HasForeignKey(ta => ta.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TaskAttachment>()
+                .HasOne(ta => ta.UploadedByUser)
+                .WithMany()
+                .HasForeignKey(ta => ta.UploadedById)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TaskAttachment>()
+                .HasQueryFilter(ta => !ta.IsDeleted);
+
+            // 7. TaskComment Entity
             modelBuilder.Entity<TaskComment>()
                 .HasOne(c => c.Task)
                 .WithMany(t => t.Comments)
@@ -105,9 +136,15 @@ namespace ManagementSystem.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<TaskComment>()
+                .HasOne(c => c.ParentComment)
+                .WithMany(c => c.Replies)
+                .HasForeignKey(c => c.ParentCommentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TaskComment>()
                 .HasQueryFilter(c => !c.IsDeleted);
 
-            // 6. Notification Entity: Cascade delete on User removal
+            // 8. Notification Entity
             modelBuilder.Entity<Notification>()
                 .HasOne(n => n.User)
                 .WithMany(u => u.Notifications)
@@ -116,6 +153,20 @@ namespace ManagementSystem.Data
 
             modelBuilder.Entity<Notification>()
                 .HasQueryFilter(n => !n.IsDeleted);
+
+            // 9. RefreshToken Entity
+            modelBuilder.Entity<RefreshToken>()
+                .HasOne(rt => rt.User)
+                .WithMany(u => u.RefreshTokens)
+                .HasForeignKey(rt => rt.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 10. AuditLog Indexes
+            modelBuilder.Entity<AuditLog>()
+                .HasIndex(a => new { a.EntityName, a.EntityId });
+
+            modelBuilder.Entity<AuditLog>()
+                .HasIndex(a => a.Timestamp);
         }
     }
 }

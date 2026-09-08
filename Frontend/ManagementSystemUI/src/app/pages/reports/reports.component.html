@@ -1,0 +1,179 @@
+<div class="reports-page">
+  <div class="reports-header">
+    <div>
+      <h1 class="page-title">Enterprise Analytics & Reports</h1>
+      <p class="page-subtitle">Measure team productivity, SLA turnaround, and export datasets</p>
+    </div>
+
+    <div class="export-actions">
+      <button class="btn btn-secondary" (click)="exportCsv()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Export CSV
+      </button>
+
+      <button class="btn btn-primary" (click)="exportHtml()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 6 2 18 2 18 9"></polyline>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+          <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+        Print / PDF Export
+      </button>
+    </div>
+  </div>
+
+  <div class="tabs-nav">
+    <button class="tab-btn" [class.active]="activeTab() === 'user'" (click)="setTab('user')">
+      User Productivity
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'team'" (click)="setTab('team')">
+      Team Velocity
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'overdue'" (click)="setTab('overdue')">
+      Overdue & Risk Audit
+    </button>
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <span>Generating analytics telemetry...</span>
+    </div>
+  } @else {
+    @if (activeTab() === 'user') {
+      <div class="data-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Assigned Tasks</th>
+              <th>Completed</th>
+              <th>In Progress</th>
+              <th>Overdue</th>
+              <th>Completion Rate</th>
+              <th>Est. Hours</th>
+              <th>Act. Hours</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of userReports(); track row.userId) {
+              <tr>
+                <td>
+                  <div class="user-cell">
+                    <div class="avatar">{{ row.userName.charAt(0) }}</div>
+                    <div>
+                      <div class="cell-title">{{ row.userName }}</div>
+                      <div class="cell-sub">{{ row.userEmail }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="metric-val">{{ row.totalAssigned }}</span></td>
+                <td><span class="badge badge-success">{{ row.completed }}</span></td>
+                <td><span class="badge badge-info">{{ row.inProgress }}</span></td>
+                <td>
+                  @if (row.overdue > 0) {
+                    <span class="badge badge-danger">{{ row.overdue }}</span>
+                  } @else {
+                    <span class="badge badge-muted">0</span>
+                  }
+                </td>
+                <td>
+                  <div class="progress-cell">
+                    <div class="progress-bar">
+                      <div class="progress-fill" [style.width.%]="row.completionRate"></div>
+                    </div>
+                    <span class="rate-val">{{ row.completionRate }}%</span>
+                  </div>
+                </td>
+                <td>{{ row.totalEstimatedHours }} hrs</td>
+                <td>{{ row.totalActualHours }} hrs</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (activeTab() === 'team') {
+      <div class="data-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Department / Team</th>
+              <th>Team Lead</th>
+              <th>Roster Size</th>
+              <th>Total Tasks</th>
+              <th>Completed</th>
+              <th>Overdue</th>
+              <th>Throughput</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of teamReports(); track row.teamId) {
+              <tr>
+                <td>
+                  <div class="cell-title">{{ row.teamName }}</div>
+                </td>
+                <td>{{ row.managerName }}</td>
+                <td>{{ row.memberCount }} members</td>
+                <td><span class="metric-val">{{ row.totalTasks }}</span></td>
+                <td><span class="badge badge-success">{{ row.completedTasks }}</span></td>
+                <td>
+                  @if (row.overdueTasks > 0) {
+                    <span class="badge badge-danger">{{ row.overdueTasks }}</span>
+                  } @else {
+                    <span class="badge badge-muted">0</span>
+                  }
+                </td>
+                <td>
+                  <div class="progress-cell">
+                    <div class="progress-bar">
+                      <div class="progress-fill" [style.width.%]="row.completionRate"></div>
+                    </div>
+                    <span class="rate-val">{{ row.completionRate }}%</span>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="data-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Task Title</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Assignee</th>
+              <th>Team</th>
+              <th>Due Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (task of overdueTasks(); track task.id) {
+              <tr>
+                <td>
+                  <div class="cell-title">{{ task.title }}</div>
+                  <div class="cell-sub">{{ task.category }}</div>
+                </td>
+                <td>
+                  <span class="badge badge-danger">{{ task.priority }}</span>
+                </td>
+                <td>
+                  <span class="badge badge-info">{{ task.status }}</span>
+                </td>
+                <td>{{ task.assignedToUserName || 'Unassigned' }}</td>
+                <td>{{ task.teamName || 'None' }}</td>
+                <td class="overdue-date">{{ task.dueDate | date:'mediumDate' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>

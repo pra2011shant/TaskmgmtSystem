@@ -1,8 +1,12 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using ManagementSystem.Data;
 using ManagementSystem.Helpers;
+using ManagementSystem.Middleware;
 using ManagementSystem.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -26,9 +30,15 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<ITeamService, TeamService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+builder.Services.AddScoped<IReportService, ReportService>();
+
+// Authorization handlers for PBAC
+builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 // =========================================================================
-// 3. AUTHENTICATION & JWT BEARER CONFIGURATION (Token Validation)
+// 3. AUTHENTICATION & JWT BEARER CONFIGURATION
 // =========================================================================
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secretKey = jwtSettings["Key"] ?? "ManagementSystemSuperSecretSecureSigningKey2025!@#$%^&*";
@@ -55,10 +65,39 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var permission in AppPermissions.All)
+    {
+        options.AddPolicy(permission, policy =>
+            policy.Requirements.Add(new PermissionRequirement(permission)));
+    }
+});
+
+// Rate limiting middleware policy
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.Identity?.Name ?? httpContext.Request.Headers.Host.ToString(),
+            factory: partition => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 100,
+                QueueLimit = 20,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsync("{\"message\":\"Too many requests. Please slow down.\"}", token);
+    };
+});
 
 // =========================================================================
-// 4. CORS CONFIGURATION (Cross-Origin Resource Sharing Policy)
+// 4. CORS CONFIGURATION
 // =========================================================================
 builder.Services.AddCors(options =>
 {
@@ -85,7 +124,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 
-// Configure Response Compression for high throughput
+// Configure Response Compression
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
@@ -103,12 +142,11 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Enterprise Team & Task Management System API",
+        Title = "WorkFlow Pro — Enterprise Task Management API",
         Version = "v1",
-        Description = "Production-grade RESTful API providing Role-Based Access Control, Task Lifecycles, and Real-Time Collaboration."
+        Description = "Enterprise Role & Permission-Based Task Management System API featuring JWT + Refresh Token Auth, Audit Logs, Kanban, Attachments, and Reports."
     });
 
-    // Configure Swagger authorization header input
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
@@ -155,29 +193,26 @@ using (var scope = app.Services.CreateScope())
 }
 
 // =========================================================================
-// 7. HTTP REQUEST PROCESSING PIPELINE (Middleware Pipeline)
+// 7. HTTP REQUEST PROCESSING PIPELINE
 // =========================================================================
+app.UseMiddleware<GlobalExceptionMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Management System API v1");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "WorkFlow Pro Enterprise API v1");
     });
 }
 
-// Enable high performance response compression
 app.UseResponseCompression();
-
-// Enable cross-origin resource sharing
 app.UseCors("AllowFrontend");
+app.UseRateLimiter();
 
-// Enforce authentication & authorization middleware execution
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Route controller endpoints
 app.MapControllers();
 
-// Execute application server
 app.Run();

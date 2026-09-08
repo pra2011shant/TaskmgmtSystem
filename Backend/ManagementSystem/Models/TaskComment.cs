@@ -20,9 +20,16 @@ namespace ManagementSystem.Models
         [ForeignKey(nameof(UserId))]
         public User User { get; set; } = null!;
 
+        public int? ParentCommentId { get; set; }
+
+        [ForeignKey(nameof(ParentCommentId))]
+        public TaskComment? ParentComment { get; set; }
+
         [Required]
         [MaxLength(1000)]
         public string Content { get; set; } = string.Empty;
+
+        public bool IsEdited { get; set; } = false;
 
         [NotMapped]
         public DateTime CreatedAt
@@ -30,5 +37,7 @@ namespace ManagementSystem.Models
             get => CreatedDate;
             set => CreatedDate = value;
         }
+
+        public ICollection<TaskComment> Replies { get; set; } = new List<TaskComment>();
     }
 }

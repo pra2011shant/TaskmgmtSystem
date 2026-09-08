@@ -7,54 +7,74 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ManagementSystem.Services
 {
-    /// <summary>
-    /// Service contract defining identity authentication, account registration, and user directory retrieval.
-    /// </summary>
     public interface IAuthService
     {
-        /// <summary>
-        /// Registers a new user account with cryptographic validation and role assignment.
-        /// </summary>
-        Task<(bool Success, string Message, AuthResponseDto? Data)> RegisterAsync(RegisterRequestDto dto);
-
-        /// <summary>
-        /// Authenticates user credentials and issues a signed JWT bearer token.
-        /// </summary>
-        Task<(bool Success, string Message, AuthResponseDto? Data)> LoginAsync(LoginRequestDto dto);
-
-        /// <summary>
-        /// Retrieves a user profile by unique identifier.
-        /// </summary>
+        Task<(bool Success, string Message, AuthResponseDto? Data)> RegisterAsync(RegisterRequestDto dto, string? ipAddress = null);
+        Task<(bool Success, string Message, AuthResponseDto? Data)> LoginAsync(LoginRequestDto dto, string? ipAddress = null);
+        Task<(bool Success, string Message, AuthResponseDto? Data)> RefreshTokenAsync(string refreshToken, string? ipAddress = null);
+        Task<(bool Success, string Message)> RevokeTokenAsync(string? refreshToken, int? userId = null);
         Task<UserDto?> GetUserByIdAsync(int id);
-
-        /// <summary>
-        /// Retrieves all active users for administrative directories and dropdown assignees.
-        /// </summary>
         Task<List<UserDto>> GetAllUsersAsync();
+        Task<List<string>> GetUserPermissionsAsync(UserRole role);
     }
 
-    /// <summary>
-    /// Implementation of authentication services with BCrypt password hashing and JWT token issuance.
-    /// </summary>
     public class AuthService : IAuthService
     {
         private readonly AppDbContext _context;
         private readonly IJwtHelper _jwtHelper;
+        private readonly IAuditService _auditService;
+        private readonly ILogger<AuthService> _logger;
 
-        public AuthService(AppDbContext context, IJwtHelper jwtHelper)
+        public AuthService(AppDbContext context, IJwtHelper jwtHelper, IAuditService auditService, ILogger<AuthService> logger)
         {
             _context = context;
             _jwtHelper = jwtHelper;
+            _auditService = auditService;
+            _logger = logger;
         }
 
-        /// <summary>
-        /// Registers a new user account verifying password complexity requirements (minimum 6 characters and special character).
-        /// </summary>
-        public async Task<(bool Success, string Message, AuthResponseDto? Data)> RegisterAsync(RegisterRequestDto dto)
+        public async Task<List<string>> GetUserPermissionsAsync(UserRole role)
+        {
+            if (role == UserRole.Admin)
+            {
+                return AppPermissions.All.ToList();
+            }
+
+            var granted = await _context.RolePermissions
+                .Where(rp => rp.Role == role && rp.IsGranted)
+                .Select(rp => rp.Permission)
+                .ToListAsync();
+
+            if (granted.Count == 0)
+            {
+                // Fallback default permissions for Manager and User
+                if (role == UserRole.Manager)
+                {
+                    return new List<string>
+                    {
+                        AppPermissions.TaskCreate, AppPermissions.TaskView, AppPermissions.TaskEdit,
+                        AppPermissions.TaskAssign, AppPermissions.TaskChangeStatus,
+                        AppPermissions.TeamView, AppPermissions.TeamEdit, AppPermissions.TeamManageMembers,
+                        AppPermissions.UserView, AppPermissions.ReportsExport
+                    };
+                }
+                else
+                {
+                    return new List<string>
+                    {
+                        AppPermissions.TaskView, AppPermissions.TaskChangeStatus,
+                        AppPermissions.TeamView, AppPermissions.UserView
+                    };
+                }
+            }
+
+            return granted;
+        }
+
+        public async Task<(bool Success, string Message, AuthResponseDto? Data)> RegisterAsync(RegisterRequestDto dto, string? ipAddress = null)
         {
             try
             {
-                // 1. Password Complexity Validation: Minimum 6 characters and at least 1 special symbol
                 if (string.IsNullOrWhiteSpace(dto.Password) || dto.Password.Length < 6)
                 {
                     return (false, "Password must be at least 6 characters long.", null);
@@ -66,23 +86,23 @@ namespace ManagementSystem.Services
                     return (false, "Password must contain at least one special character (e.g. @, #, $, %, !, &, *).", null);
                 }
 
-                // 2. Enforce unique email constraint (case-insensitive, including soft-deleted to avoid DB unique constraint conflict)
                 var normalizedEmail = dto.Email.Trim().ToLower();
                 var existingUser = await _context.Users
                     .IgnoreQueryFilters()
                     .AnyAsync(u => u.Email.ToLower() == normalizedEmail);
+
                 if (existingUser)
                 {
                     return (false, "A user with this email address already exists.", null);
                 }
 
-                // 3. Provision new User entity with salted BCrypt password hash
                 var user = new User
                 {
                     FullName = dto.FullName.Trim(),
                     Email = normalizedEmail,
                     PasswordHash = PasswordHasher.HashPassword(dto.Password),
                     Role = dto.Role,
+                    Department = dto.Department?.Trim(),
                     Remarks = dto.Remarks?.Trim(),
                     Status = 1,
                     IsDeleted = false,
@@ -92,123 +112,234 @@ namespace ManagementSystem.Services
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
-                // 4. Generate signed JWT bearer token
-                var (token, expiration) = _jwtHelper.GenerateToken(user);
+                var permissions = await GetUserPermissionsAsync(user.Role);
+                var (token, expiration) = _jwtHelper.GenerateToken(user, permissions);
+                var (refreshToken, refreshExpiration) = _jwtHelper.GenerateRefreshToken();
+
+                var rtEntity = new RefreshToken
+                {
+                    UserId = user.Id,
+                    Token = refreshToken,
+                    ExpiryDate = refreshExpiration,
+                    CreatedByIp = ipAddress,
+                    CreatedDate = DateTime.UtcNow
+                };
+                _context.RefreshTokens.Add(rtEntity);
+                await _context.SaveChangesAsync();
+
+                await _auditService.LogAsync("UserRegistered", "User", user.Id.ToString(), null, new { user.Email, user.Role }, user.Id, user.FullName, user.Role.ToString(), ipAddress);
 
                 var response = new AuthResponseDto
                 {
                     Token = token,
                     Expiration = expiration,
-                    User = new UserDto
-                    {
-                        Id = user.Id,
-                        FullName = user.FullName,
-                        Email = user.Email,
-                        Role = user.Role.ToString(),
-                        CreatedAt = user.CreatedDate,
-                        Remarks = user.Remarks,
-                        Status = user.Status,
-                        IsDeleted = user.IsDeleted,
-                        LastUpdatedDate = user.LastUpdatedDate,
-                        CreatedById = user.CreatedById
-                    }
+                    RefreshToken = refreshToken,
+                    RefreshTokenExpiration = refreshExpiration,
+                    Permissions = permissions,
+                    User = MapToDto(user)
                 };
 
                 return (true, "Registration successful.", response);
             }
             catch (Exception ex)
             {
-                return (false, $"Registration failed: {ex.Message}", null);
+                _logger.LogError(ex, "Error occurred during user registration.");
+                return (false, "An error occurred during registration. Please try again.", null);
             }
         }
 
-        /// <summary>
-        /// Authenticates user credentials and returns session authorization token.
-        /// </summary>
-        public async Task<(bool Success, string Message, AuthResponseDto? Data)> LoginAsync(LoginRequestDto dto)
+        public async Task<(bool Success, string Message, AuthResponseDto? Data)> LoginAsync(LoginRequestDto dto, string? ipAddress = null)
         {
-            var normalizedEmail = dto.Email.Trim().ToLower();
-            var user = await _context.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
-
-            if (user == null || !PasswordHasher.VerifyPassword(dto.Password, user.PasswordHash))
+            try
             {
-                return (false, "Invalid email or password.", null);
-            }
+                var normalizedEmail = dto.Email.Trim().ToLower();
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
 
-            var (token, expiration) = _jwtHelper.GenerateToken(user);
-
-            var response = new AuthResponseDto
-            {
-                Token = token,
-                Expiration = expiration,
-                User = new UserDto
+                if (user == null)
                 {
-                    Id = user.Id,
-                    FullName = user.FullName,
-                    Email = user.Email,
-                    Role = user.Role.ToString(),
-                    CreatedAt = user.CreatedDate,
-                    Remarks = user.Remarks,
-                    Status = user.Status,
-                    IsDeleted = user.IsDeleted,
-                    LastUpdatedDate = user.LastUpdatedDate,
-                    CreatedById = user.CreatedById
+                    return (false, "Invalid email or password.", null);
                 }
-            };
 
-            return (true, "Login successful.", response);
+                if (user.IsLockedOut)
+                {
+                    return (false, $"Account is temporarily locked out until {user.LockoutEnd:g} UTC due to multiple failed login attempts.", null);
+                }
+
+                var isPasswordValid = PasswordHasher.VerifyPassword(dto.Password, user.PasswordHash);
+                if (!isPasswordValid)
+                {
+                    user.FailedLoginAttempts++;
+                    if (user.FailedLoginAttempts >= 5)
+                    {
+                        user.LockoutEnd = DateTime.UtcNow.AddMinutes(15);
+                        await _auditService.LogAsync("AccountLocked", "User", user.Id.ToString(), null, new { user.Email, user.LockoutEnd }, user.Id, user.FullName, user.Role.ToString(), ipAddress);
+                    }
+                    await _context.SaveChangesAsync();
+                    return (false, "Invalid email or password.", null);
+                }
+
+                // Reset failed attempts upon successful login
+                user.FailedLoginAttempts = 0;
+                user.LockoutEnd = null;
+                user.LastUpdatedDate = DateTime.UtcNow;
+
+                var permissions = await GetUserPermissionsAsync(user.Role);
+                var (token, expiration) = _jwtHelper.GenerateToken(user, permissions);
+                var (refreshToken, refreshExpiration) = _jwtHelper.GenerateRefreshToken();
+
+                var rtEntity = new RefreshToken
+                {
+                    UserId = user.Id,
+                    Token = refreshToken,
+                    ExpiryDate = refreshExpiration,
+                    CreatedByIp = ipAddress,
+                    CreatedDate = DateTime.UtcNow
+                };
+                _context.RefreshTokens.Add(rtEntity);
+                await _context.SaveChangesAsync();
+
+                await _auditService.LogAsync("UserLogin", "User", user.Id.ToString(), null, new { user.Email, user.Role }, user.Id, user.FullName, user.Role.ToString(), ipAddress);
+
+                var response = new AuthResponseDto
+                {
+                    Token = token,
+                    Expiration = expiration,
+                    RefreshToken = refreshToken,
+                    RefreshTokenExpiration = refreshExpiration,
+                    Permissions = permissions,
+                    User = MapToDto(user)
+                };
+
+                return (true, "Login successful.", response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred during login.");
+                return (false, "An error occurred during authentication. Please try again.", null);
+            }
         }
 
-        /// <summary>
-        /// Retrieves a user profile by unique identifier using non-tracking query.
-        /// </summary>
+        public async Task<(bool Success, string Message, AuthResponseDto? Data)> RefreshTokenAsync(string refreshToken, string? ipAddress = null)
+        {
+            try
+            {
+                var storedToken = await _context.RefreshTokens
+                    .Include(rt => rt.User)
+                    .FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+
+                if (storedToken == null || !storedToken.IsActive)
+                {
+                    return (false, "Invalid or expired refresh token.", null);
+                }
+
+                // Rotate refresh token (revoke current and issue a new one)
+                storedToken.IsRevoked = true;
+                storedToken.LastUpdatedDate = DateTime.UtcNow;
+
+                var user = storedToken.User;
+                var permissions = await GetUserPermissionsAsync(user.Role);
+                var (newToken, newExpiration) = _jwtHelper.GenerateToken(user, permissions);
+                var (newRefreshToken, newRefreshExpiration) = _jwtHelper.GenerateRefreshToken();
+
+                var newRtEntity = new RefreshToken
+                {
+                    UserId = user.Id,
+                    Token = newRefreshToken,
+                    ExpiryDate = newRefreshExpiration,
+                    CreatedByIp = ipAddress,
+                    CreatedDate = DateTime.UtcNow
+                };
+                _context.RefreshTokens.Add(newRtEntity);
+                await _context.SaveChangesAsync();
+
+                var response = new AuthResponseDto
+                {
+                    Token = newToken,
+                    Expiration = newExpiration,
+                    RefreshToken = newRefreshToken,
+                    RefreshTokenExpiration = newRefreshExpiration,
+                    Permissions = permissions,
+                    User = MapToDto(user)
+                };
+
+                return (true, "Token refreshed successfully.", response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred refreshing token.");
+                return (false, "An error occurred while refreshing the session.", null);
+            }
+        }
+
+        public async Task<(bool Success, string Message)> RevokeTokenAsync(string? refreshToken, int? userId = null)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(refreshToken))
+                {
+                    var token = await _context.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+                    if (token != null)
+                    {
+                        token.IsRevoked = true;
+                        token.LastUpdatedDate = DateTime.UtcNow;
+                    }
+                }
+                else if (userId.HasValue)
+                {
+                    var activeTokens = await _context.RefreshTokens
+                        .Where(rt => rt.UserId == userId.Value && !rt.IsRevoked)
+                        .ToListAsync();
+
+                    foreach (var tok in activeTokens)
+                    {
+                        tok.IsRevoked = true;
+                        tok.LastUpdatedDate = DateTime.UtcNow;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                return (true, "Token revoked successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred revoking token.");
+                return (false, "Failed to revoke token.");
+            }
+        }
+
         public async Task<UserDto?> GetUserByIdAsync(int id)
         {
-            var user = await _context.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Id == id);
+            var user = await _context.Users.FindAsync(id);
+            return user == null ? null : MapToDto(user);
+        }
 
-            if (user == null) return null;
+        public async Task<List<UserDto>> GetAllUsersAsync()
+        {
+            var users = await _context.Users
+                .OrderBy(u => u.FullName)
+                .ToListAsync();
 
+            return users.Select(MapToDto).ToList();
+        }
+
+        private static UserDto MapToDto(User user)
+        {
             return new UserDto
             {
                 Id = user.Id,
                 FullName = user.FullName,
                 Email = user.Email,
                 Role = user.Role.ToString(),
+                Department = user.Department,
                 CreatedAt = user.CreatedDate,
                 Remarks = user.Remarks,
                 Status = user.Status,
                 IsDeleted = user.IsDeleted,
+                IsLockedOut = user.IsLockedOut,
                 LastUpdatedDate = user.LastUpdatedDate,
                 CreatedById = user.CreatedById
             };
-        }
-
-        /// <summary>
-        /// Retrieves all active users for assignment pickers using high-performance non-tracking projection.
-        /// </summary>
-        public async Task<List<UserDto>> GetAllUsersAsync()
-        {
-            return await _context.Users
-                .AsNoTracking()
-                .OrderBy(u => u.FullName)
-                .Select(u => new UserDto
-                {
-                    Id = u.Id,
-                    FullName = u.FullName,
-                    Email = u.Email,
-                    Role = u.Role.ToString(),
-                    CreatedAt = u.CreatedDate,
-                    Remarks = u.Remarks,
-                    Status = u.Status,
-                    IsDeleted = u.IsDeleted,
-                    LastUpdatedDate = u.LastUpdatedDate,
-                    CreatedById = u.CreatedById
-                })
-                .ToListAsync();
         }
     }
 }

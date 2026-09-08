@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ManagementSystem.Controllers
 {
     /// <summary>
-    /// RESTful API Controller managing the work task lifecycle, filtering, state transitions, and deletions.
+    /// RESTful API Controller managing the work task lifecycle, subtasks, filtering, state transitions, and deletions.
     /// </summary>
     [Authorize]
     [ApiController]
@@ -22,18 +22,12 @@ namespace ManagementSystem.Controllers
             _taskService = taskService;
         }
 
-        /// <summary>
-        /// Extracts authenticated user's unique identifier from JWT identity claims.
-        /// </summary>
-        private int CurrentUserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-        /// <summary>
-        /// Extracts authenticated user's role designation from JWT identity claims.
-        /// </summary>
+        private int CurrentUserId => int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 1;
         private string CurrentUserRole => User.FindFirstValue(ClaimTypes.Role) ?? "User";
+        private string? ClientIp => HttpContext.Connection.RemoteIpAddress?.ToString();
 
         /// <summary>
-        /// Retrieves filtered tasks according to search terms, state, priority, and team assignments (GET /api/tasks).
+        /// Retrieves filtered tasks (GET /api/tasks).
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetTasks([FromQuery] TaskFilterDto filter)
@@ -57,7 +51,7 @@ namespace ManagementSystem.Controllers
         }
 
         /// <summary>
-        /// Provisions a new task entity (Admin and Manager roles only) (POST /api/tasks).
+        /// Provisions a new task entity (POST /api/tasks).
         /// </summary>
         [HttpPost]
         [Authorize(Roles = "Admin,Manager")]
@@ -65,14 +59,14 @@ namespace ManagementSystem.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var (success, message, data) = await _taskService.CreateTaskAsync(dto, CurrentUserId, CurrentUserRole);
+            var (success, message, data) = await _taskService.CreateTaskAsync(dto, CurrentUserId, CurrentUserRole, ClientIp);
             if (!success) return BadRequest(new { message });
 
             return CreatedAtAction(nameof(GetTaskById), new { id = data!.Id }, data);
         }
 
         /// <summary>
-        /// Modifies an existing task entity (Admin and Manager roles only) (PUT /api/tasks/{id}).
+        /// Modifies an existing task entity (PUT /api/tasks/{id}).
         /// </summary>
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin,Manager")]
@@ -80,37 +74,77 @@ namespace ManagementSystem.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var (success, message, data) = await _taskService.UpdateTaskAsync(id, dto, CurrentUserId, CurrentUserRole);
+            var (success, message, data) = await _taskService.UpdateTaskAsync(id, dto, CurrentUserId, CurrentUserRole, ClientIp);
             if (!success) return BadRequest(new { message });
 
             return Ok(data);
         }
 
         /// <summary>
-        /// Executes a workflow state machine transition (ToDo -> InProgress -> Done) (PATCH /api/tasks/{id}/status).
+        /// Executes a workflow state machine transition (PATCH /api/tasks/{id}/status).
         /// </summary>
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> UpdateTaskStatus(int id, [FromBody] UpdateTaskStatusDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var (success, message, data) = await _taskService.UpdateTaskStatusAsync(id, dto.Status, CurrentUserId, CurrentUserRole);
+            var (success, message, data) = await _taskService.UpdateTaskStatusAsync(id, dto.Status, CurrentUserId, CurrentUserRole, ClientIp);
             if (!success) return BadRequest(new { message });
 
             return Ok(data);
         }
 
         /// <summary>
-        /// Logically soft-deletes a task (Admin and Manager roles only) (DELETE /api/tasks/{id}).
+        /// Logically soft-deletes a task (DELETE /api/tasks/{id}).
         /// </summary>
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> DeleteTask(int id)
         {
-            var (success, message) = await _taskService.DeleteTaskAsync(id, CurrentUserId, CurrentUserRole);
+            var (success, message) = await _taskService.DeleteTaskAsync(id, CurrentUserId, CurrentUserRole, ClientIp);
             if (!success) return BadRequest(new { message });
 
             return Ok(new { message });
+        }
+
+        /// <summary>
+        /// Adds a subtask to a task (POST /api/tasks/{id}/subtasks).
+        /// </summary>
+        [HttpPost("{id}/subtasks")]
+        public async Task<IActionResult> AddSubTask(int id, [FromBody] CreateSubTaskDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var (success, message, data) = await _taskService.AddSubTaskAsync(id, dto, CurrentUserId, CurrentUserRole);
+            if (!success) return BadRequest(new { message });
+
+            return Ok(data);
+        }
+
+        /// <summary>
+        /// Updates a subtask (PUT /api/tasks/{id}/subtasks/{subTaskId}).
+        /// </summary>
+        [HttpPut("{id}/subtasks/{subTaskId}")]
+        public async Task<IActionResult> UpdateSubTask(int id, int subTaskId, [FromBody] UpdateSubTaskDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var (success, message, data) = await _taskService.UpdateSubTaskAsync(subTaskId, dto, CurrentUserId, CurrentUserRole);
+            if (!success) return BadRequest(new { message });
+
+            return Ok(data);
+        }
+
+        /// <summary>
+        /// Deletes a subtask (DELETE /api/tasks/{id}/subtasks/{subTaskId}).
+        /// </summary>
+        [HttpDelete("{id}/subtasks/{subTaskId}")]
+        public async Task<IActionResult> DeleteSubTask(int id, int subTaskId)
+        {
+            var (success, message) = await _taskService.DeleteSubTaskAsync(subTaskId, CurrentUserId, CurrentUserRole);
+            if (!success) return BadRequest(new { message });
+
+            return Ok(new { success = true, message });
         }
     }
 }

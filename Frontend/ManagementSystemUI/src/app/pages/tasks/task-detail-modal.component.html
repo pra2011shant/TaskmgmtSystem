@@ -1,169 +1,268 @@
-<div class="modal-overlay" (click)="close()">
-  <div class="modal-content modal-large" (click)="$event.stopPropagation()">
-    <!-- Header -->
+<div class="modal-backdrop" (click)="handleClose()">
+  <div class="modal-dialog" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <div class="task-title-group">
-        <app-status-badge type="status" [value]="task.status"></app-status-badge>
-        <h3 class="task-modal-title">{{ task.title }}</h3>
+      <div class="header-left">
+        <span class="task-id">#{{ task.id }}</span>
+        <h2 class="modal-title">{{ task.title }}</h2>
       </div>
-      <button class="btn-icon" (click)="close()"><i class="fa-solid fa-xmark"></i></button>
+      <button class="close-btn" (click)="handleClose()">✕</button>
+    </div>
+
+    <!-- Workflow Status Pipeline -->
+    <div class="workflow-bar">
+      <span class="workflow-label">Workflow:</span>
+      <div class="workflow-steps">
+        <button 
+          class="step-pill" 
+          [class.active]="task.status === 'ToDo' || task.status === 'Created'" 
+          (click)="changeStatus(2)"
+        >
+          1. To Do
+        </button>
+        <span class="step-arrow">→</span>
+        <button 
+          class="step-pill" 
+          [class.active]="task.status === 'InProgress'" 
+          (click)="changeStatus(3)"
+        >
+          2. In Progress
+        </button>
+        <span class="step-arrow">→</span>
+        <button 
+          class="step-pill" 
+          [class.active]="task.status === 'Review'" 
+          (click)="changeStatus(4)"
+        >
+          3. Review
+        </button>
+        <span class="step-arrow">→</span>
+        <button 
+          class="step-pill" 
+          [class.active]="task.status === 'Done'" 
+          (click)="changeStatus(5)"
+        >
+          4. Done
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-tabs">
+      <button class="tab-btn" [class.active]="activeTab() === 'overview'" (click)="activeTab.set('overview')">
+        Overview
+      </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'subtasks'" (click)="activeTab.set('subtasks')">
+        Subtasks ({{ subtasks().length }})
+      </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'attachments'" (click)="activeTab.set('attachments')">
+        Attachments ({{ attachments().length }})
+      </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'comments'" (click)="activeTab.set('comments')">
+        Discussions ({{ comments().length }})
+      </button>
     </div>
 
     <div class="modal-body">
-      <!-- Quick Status Buttons (For all roles) -->
-      <div class="quick-status-bar">
-        <span class="status-bar-label">Quick Update Status:</span>
-        <div class="status-btn-group">
-          <button 
-            type="button" 
-            class="btn-status" 
-            [class.active]="task.status === 'ToDo'"
-            (click)="changeStatus(1)"
-          >
-            <i class="fa-solid fa-circle-dot"></i> To Do
-          </button>
-          <button 
-            type="button" 
-            class="btn-status" 
-            [class.active]="task.status === 'InProgress'"
-            (click)="changeStatus(2)"
-          >
-            <i class="fa-solid fa-spinner"></i> In Progress
-          </button>
-          <button 
-            type="button" 
-            class="btn-status" 
-            [class.active]="task.status === 'Done'"
-            (click)="changeStatus(3)"
-          >
-            <i class="fa-solid fa-circle-check"></i> Done
-          </button>
-        </div>
-      </div>
-
-      <!-- Description -->
-      <div class="detail-section">
-        <label class="section-label">Description</label>
-        <p class="description-text">{{ task.description || 'No description provided.' }}</p>
-      </div>
-
-      <!-- Metadata Grid -->
-      <div class="meta-grid">
-        <div class="meta-card">
-          <span class="meta-label">Priority</span>
-          <app-status-badge type="priority" [value]="task.priority"></app-status-badge>
-        </div>
-
-        <div class="meta-card">
-          <span class="meta-label">Assignee</span>
-          <div class="assignee-val">
-            <div class="avatar-xs">{{ (task.assignedToUserName || '?').charAt(0) }}</div>
-            <span>{{ task.assignedToUserName || 'Unassigned' }}</span>
-          </div>
-        </div>
-
-        <div class="meta-card">
-          <span class="meta-label">Team</span>
-          <span class="meta-val">{{ task.teamName || 'General' }}</span>
-        </div>
-
-        <div class="meta-card">
-          <span class="meta-label">Due Date</span>
-          <span class="meta-val" [class.text-danger]="isOverdue(task.dueDate, task.status)">
-            {{ task.dueDate ? (task.dueDate | date:'mediumDate') : 'No deadline' }}
-          </span>
-        </div>
-      </div>
-
-      <!-- System Audit & Tracking Columns (ADMIN ONLY) -->
-      <div class="admin-audit-box" *ngIf="authService.isAdmin()">
-        <div class="audit-box-header">
-          <div class="audit-header-left">
-            <i class="fa-solid fa-shield-halved text-primary"></i>
-            <span class="audit-box-title">System Audit & Tracking (Admin Only)</span>
-          </div>
-          <span class="audit-restricted-pill">Privileged View</span>
-        </div>
-        <div class="audit-fields-grid">
-          <div class="audit-field">
-            <span class="audit-label">Remarks:</span>
-            <span class="audit-val">{{ task.remarks || 'None' }}</span>
-          </div>
-          <div class="audit-field">
-            <span class="audit-label">Workflow Status:</span>
-            <span class="audit-val">{{ task.status }}</span>
-          </div>
-          <div class="audit-field">
-            <span class="audit-label">Soft Delete (IsDeleted):</span>
-            <span class="audit-val">{{ task.isDeleted ? '1 (Deleted)' : '0 (Active)' }}</span>
-          </div>
-          <div class="audit-field">
-            <span class="audit-label">Created Date (UTC):</span>
-            <span class="audit-val">{{ (task.createdDate || task.createdAt) | date:'medium' }}</span>
-          </div>
-          <div class="audit-field">
-            <span class="audit-label">Last Updated Date:</span>
-            <span class="audit-val">{{ task.lastUpdatedDate ? (task.lastUpdatedDate | date:'medium') : 'Not modified' }}</span>
-          </div>
-          <div class="audit-field">
-            <span class="audit-label">Created By ID:</span>
-            <span class="audit-val">{{ task.createdByUserName || ('User #' + (task.createdById || 1)) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Comments / Discussion Collaboration Thread -->
-      <div class="comments-section">
-        <div class="comments-header">
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <i class="fa-solid fa-comments text-primary"></i>
-            <h4 style="margin: 0; font-size: 0.9375rem; font-weight: 700;">Collaboration & Comments ({{ comments().length }})</h4>
-          </div>
-        </div>
-
-        <!-- Comment List -->
-        <div class="comment-list">
-          <div *ngFor="let c of comments()" class="comment-item">
-            <div class="comment-avatar">
-              {{ c.userName.charAt(0) }}
-            </div>
-            <div class="comment-bubble">
-              <div class="comment-bubble-header">
-                <span class="comment-author">{{ c.userName }}</span>
-                <span class="badge badge-role" [ngClass]="'badge-role-' + (c.userRole | lowercase)">{{ c.userRole }}</span>
-                <span class="comment-time">{{ c.createdAt | date:'short' }}</span>
+      @if (activeTab() === 'overview') {
+        <div class="overview-grid">
+          <div class="overview-main">
+            <div class="field-group">
+              <label>Description</label>
+              <div class="description-box">
+                {{ task.description || 'No description provided.' }}
               </div>
-              <p class="comment-content">{{ c.content }}</p>
+            </div>
+
+            @if (task.tags) {
+              <div class="field-group">
+                <label>Tags</label>
+                <div class="tags-list">
+                  @for (tag of task.tags.split(','); track tag) {
+                    <span class="tag-pill">#{{ tag.trim() }}</span>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (task.estimatedHours || task.actualHours) {
+              <div class="field-group">
+                <label>Hours Tracking</label>
+                <div class="hours-card">
+                  <div class="hours-stat">
+                    <span class="hours-num">{{ task.estimatedHours || 0 }}h</span>
+                    <span class="hours-lbl">Estimated</span>
+                  </div>
+                  <div class="hours-stat">
+                    <span class="hours-num">{{ task.actualHours || 0 }}h</span>
+                    <span class="hours-lbl">Actual Logged</span>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="overview-sidebar">
+            <div class="meta-card">
+              <div class="meta-item">
+                <span class="meta-lbl">Category</span>
+                <span class="meta-val">{{ task.category || 'General' }}</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-lbl">Priority</span>
+                <span class="badge priority-badge" [class]="'p-' + task.priority.toLowerCase()">{{ task.priority }}</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-lbl">Department</span>
+                <span class="meta-val">{{ task.teamName || 'Unassigned' }}</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-lbl">Assignee</span>
+                <span class="meta-val">{{ task.assignedToUserName || 'Unassigned' }}</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-lbl">Due Date</span>
+                <span class="meta-val" [class.overdue]="isOverdue(task.dueDate, task.status)">
+                  {{ task.dueDate ? (task.dueDate | date:'mediumDate') : 'No deadline' }}
+                </span>
+              </div>
             </div>
           </div>
-
-          <div *ngIf="comments().length === 0" class="no-comments">
-            <p>No comments yet. Start the conversation!</p>
-          </div>
         </div>
-
-        <!-- Add Comment Box -->
-        <form (ngSubmit)="postComment()" class="add-comment-form">
-          <div class="comment-input-wrap">
+      } @else if (activeTab() === 'subtasks') {
+        <div class="subtasks-section">
+          <div class="subtask-add-bar">
             <input 
               type="text" 
-              class="form-control" 
-              [(ngModel)]="newComment" 
-              name="newComment" 
-              placeholder="Write a comment or update on this task..."
-              required
+              placeholder="Add a new subtask breakdown..." 
+              [(ngModel)]="newSubtaskTitle"
+              (keyup.enter)="addSubtask()"
+              class="subtask-input"
             />
-            <button type="submit" class="btn btn-primary btn-sm" [disabled]="submittingComment() || !newComment.trim()">
-              <i class="fa-solid fa-paper-plane"></i>
-              <span>Send</span>
+            <button class="btn btn-primary" (click)="addSubtask()">+ Add</button>
+          </div>
+
+          <div class="subtasks-list">
+            @for (st of subtasks(); track st.id) {
+              <div class="subtask-item" [class.completed]="st.isCompleted">
+                <input 
+                  type="checkbox" 
+                  [checked]="st.isCompleted" 
+                  (change)="toggleSubtask(st)"
+                />
+                <span class="st-title">{{ st.title }}</span>
+                <button class="btn-icon" (click)="deleteSubtask(st.id)">✕</button>
+              </div>
+            } @empty {
+              <p class="empty-text">No subtasks added yet.</p>
+            }
+          </div>
+        </div>
+      } @else if (activeTab() === 'attachments') {
+        <div class="attachments-section">
+          <div class="upload-zone">
+            <input type="file" (change)="onFileSelected($event)" id="fileUpload" class="file-hidden" />
+            <label for="fileUpload" class="upload-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>{{ isUploading() ? 'Uploading file...' : 'Upload Attachment (PDF, Image, Docs)' }}</span>
+            </label>
+          </div>
+
+          <div class="attachments-list">
+            @for (att of attachments(); track att.id) {
+              <div class="attachment-item">
+                <div class="att-info">
+                  <span class="att-name">{{ att.fileName }}</span>
+                  <span class="att-meta">{{ (att.fileSize / 1024).toFixed(1) }} KB • Uploaded by {{ att.uploadedByUserName }}</span>
+                </div>
+                <div class="att-actions">
+                  <a [href]="att.downloadUrl" target="_blank" class="btn-xs">Download</a>
+                  <button class="btn-icon" (click)="deleteAttachment(att.id)">✕</button>
+                </div>
+              </div>
+            } @empty {
+              <p class="empty-text">No attachments uploaded yet.</p>
+            }
+          </div>
+        </div>
+      } @else {
+        <div class="comments-section">
+          <div class="comment-input-box">
+            <textarea 
+              rows="3" 
+              placeholder="Write a comment... (Type @username to mention a teammate)" 
+              [(ngModel)]="newComment"
+              class="comment-textarea"
+            ></textarea>
+            <button 
+              class="btn btn-primary post-btn" 
+              [disabled]="submittingComment() || !newComment.trim()" 
+              (click)="postComment()"
+            >
+              Post Comment
             </button>
           </div>
-        </form>
-      </div>
-    </div>
 
-    <div class="modal-footer">
-      <button type="button" class="btn btn-secondary" (click)="close()">Close</button>
+          <div class="comments-thread">
+            @for (comm of comments(); track comm.id) {
+              <div class="comment-card">
+                <div class="comment-header">
+                  <div class="user-cell">
+                    <div class="avatar">{{ comm.userName.charAt(0) }}</div>
+                    <div>
+                      <span class="comm-user">{{ comm.userName }}</span>
+                      <span class="comm-role">({{ comm.userRole }})</span>
+                    </div>
+                  </div>
+                  <span class="comm-date">{{ comm.createdAt | date:'short' }}</span>
+                </div>
+
+                <div class="comment-content">{{ comm.content }}</div>
+
+                <div class="comment-actions">
+                  <button class="btn-link" (click)="replyToCommentId.set(comm.id)">Reply</button>
+                  @if (authService.currentUser()?.id === comm.userId || authService.isAdmin()) {
+                    <button class="btn-link text-danger" (click)="deleteComment(comm.id)">Delete</button>
+                  }
+                </div>
+
+                <!-- Reply Input -->
+                @if (replyToCommentId() === comm.id) {
+                  <div class="reply-input-box">
+                    <input 
+                      type="text" 
+                      placeholder="Write a reply..." 
+                      [(ngModel)]="replyContent" 
+                      class="reply-input"
+                    />
+                    <button class="btn btn-primary" (click)="postComment(comm.id)">Send</button>
+                    <button class="btn-link" (click)="replyToCommentId.set(null)">Cancel</button>
+                  </div>
+                }
+
+                <!-- Nested Replies -->
+                @if (comm.replies && comm.replies.length > 0) {
+                  <div class="nested-replies">
+                    @for (rep of comm.replies; track rep.id) {
+                      <div class="reply-item">
+                        <div class="reply-header">
+                          <span class="comm-user">{{ rep.userName }}</span>
+                          <span class="comm-date">{{ rep.createdAt | date:'short' }}</span>
+                        </div>
+                        <div class="reply-content">{{ rep.content }}</div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            } @empty {
+              <p class="empty-text">No comments on this task yet.</p>
+            }
+          </div>
+        </div>
+      }
     </div>
   </div>
 </div>

@@ -24,14 +24,24 @@
       <span>Tasks & Kanban</span>
     </a>
 
-    <a routerLink="/schedule" routerLinkActive="active" class="nav-item">
+    <a routerLink="/calendar" routerLinkActive="active" class="nav-item">
       <i class="fa-solid fa-calendar-days"></i>
-      <span>Schedule & Dates</span>
+      <span>Calendar View</span>
+    </a>
+
+    <a routerLink="/schedule" routerLinkActive="active" class="nav-item">
+      <i class="fa-solid fa-timeline"></i>
+      <span>Schedule & Timeline</span>
     </a>
 
     <a routerLink="/teams" routerLinkActive="active" class="nav-item">
       <i class="fa-solid fa-users-rectangle"></i>
       <span>Teams</span>
+    </a>
+
+    <a routerLink="/reports" routerLinkActive="active" class="nav-item">
+      <i class="fa-solid fa-chart-line"></i>
+      <span>Analytics & Reports</span>
     </a>
 
     <a routerLink="/notifications" routerLinkActive="active" class="nav-item">
@@ -43,6 +53,10 @@
     </a>
 
     <div class="nav-section-title" *ngIf="authService.isAdmin()">ADMIN TOOLS</div>
+    <a routerLink="/admin" routerLinkActive="active" class="nav-item" *ngIf="authService.isAdmin()">
+      <i class="fa-solid fa-screwdriver-wrench"></i>
+      <span>Admin Control Center</span>
+    </a>
     <a routerLink="/users" routerLinkActive="active" class="nav-item" *ngIf="authService.isAdmin()">
       <i class="fa-solid fa-users-gear"></i>
       <span>User Directory</span>

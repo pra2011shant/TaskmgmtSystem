@@ -1,0 +1,172 @@
+<div class="admin-page">
+  <div class="admin-header">
+    <div>
+      <h1 class="page-title">Enterprise Administration Center</h1>
+      <p class="page-subtitle">Configure granular security permissions, inspect system audit logs & telemetry</p>
+    </div>
+  </div>
+
+  <div class="tabs-nav">
+    <button class="tab-btn" [class.active]="activeTab() === 'permissions'" (click)="setTab('permissions')">
+      Roles & Granular Permissions
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'audit'" (click)="setTab('audit')">
+      Security Audit Trail
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'stats'" (click)="setTab('stats')">
+      System Telemetry & Architecture
+    </button>
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <span>Loading enterprise admin data...</span>
+    </div>
+  } @else {
+    @if (activeTab() === 'permissions') {
+      <div class="admin-card">
+        <div class="role-selector-bar">
+          <label>Target RBAC Role:</label>
+          <div class="role-buttons">
+            <button 
+              class="role-pill" 
+              [class.active]="selectedRole() === 2" 
+              (click)="onRoleChange(2)"
+            >
+              Team Manager (Manager)
+            </button>
+            <button 
+              class="role-pill" 
+              [class.active]="selectedRole() === 3" 
+              (click)="onRoleChange(3)"
+            >
+              Team Member (User)
+            </button>
+          </div>
+          <button class="btn btn-primary save-perms-btn" (click)="savePermissions()">
+            Save Permission Matrix
+          </button>
+        </div>
+
+        <div class="permissions-grid">
+          @for (perm of permissionsMatrix()?.allPermissions; track perm) {
+            <label class="perm-card" [class.selected]="isPermissionChecked(perm)">
+              <input 
+                type="checkbox" 
+                [checked]="isPermissionChecked(perm)" 
+                (change)="togglePermission(perm)"
+              />
+              <div class="perm-info">
+                <span class="perm-name">{{ perm }}</span>
+                <span class="perm-desc">Grant access for {{ perm }} capability</span>
+              </div>
+            </label>
+          }
+        </div>
+      </div>
+    } @else if (activeTab() === 'audit') {
+      <div class="admin-card">
+        <div class="audit-filter-bar">
+          <input 
+            type="text" 
+            placeholder="Filter by entity (e.g. Task, User, Team)..." 
+            [(ngModel)]="auditFilterEntity"
+            (keyup.enter)="loadTab()"
+            class="audit-search"
+          />
+          <button class="btn btn-secondary" (click)="loadTab()">Search Logs</button>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Timestamp (UTC)</th>
+              <th>User</th>
+              <th>Action</th>
+              <th>Entity</th>
+              <th>Entity ID</th>
+              <th>IP Address</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (log of auditLogs(); track log.id) {
+              <tr>
+                <td>{{ log.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</td>
+                <td>
+                  <strong>{{ log.userName || 'System' }}</strong>
+                  <div class="cell-sub">{{ log.userRole || 'Auth' }}</div>
+                </td>
+                <td><span class="badge badge-info">{{ log.action }}</span></td>
+                <td>{{ log.entityName }}</td>
+                <td>{{ log.entityId || 'N/A' }}</td>
+                <td><code>{{ log.ipAddress || '127.0.0.1' }}</code></td>
+                <td>
+                  <button class="btn-xs" (click)="viewAuditDetails(log)">View Diff</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-number">{{ systemStats()?.totalUsers }}</div>
+          <div class="stat-label">Active Users</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number">{{ systemStats()?.totalTeams }}</div>
+          <div class="stat-label">Total Teams</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number">{{ systemStats()?.totalTasks }}</div>
+          <div class="stat-label">Total Tasks</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number">{{ systemStats()?.totalComments }}</div>
+          <div class="stat-label">Comments & Discussions</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number">{{ systemStats()?.totalAttachments }}</div>
+          <div class="stat-label">Stored File Attachments</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number">{{ systemStats()?.totalAuditLogs }}</div>
+          <div class="stat-label">Audit Log Mutations</div>
+        </div>
+      </div>
+
+      <div class="admin-card tech-card">
+        <h3>Runtime Telemetry</h3>
+        <p><strong>Framework:</strong> {{ systemStats()?.frameworkVersion }}</p>
+        <p><strong>Database:</strong> {{ systemStats()?.databaseEngine }}</p>
+        <p><strong>Server Time (UTC):</strong> {{ systemStats()?.serverTimeUtc | date:'medium' }}</p>
+      </div>
+    }
+  }
+</div>
+
+@if (selectedAuditLog()) {
+  <div class="modal-backdrop" (click)="selectedAuditLog.set(null)">
+    <div class="modal-dialog" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Audit Log Inspection: {{ selectedAuditLog()?.action }}</h3>
+        <button class="close-btn" (click)="selectedAuditLog.set(null)">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="diff-view">
+          <div>
+            <h4>Previous State (Old Value)</h4>
+            <pre>{{ selectedAuditLog()?.oldValueJson || 'null' }}</pre>
+          </div>
+          <div>
+            <h4>Updated State (New Value)</h4>
+            <pre>{{ selectedAuditLog()?.newValueJson || 'null' }}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}

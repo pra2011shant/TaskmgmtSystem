@@ -1,21 +1,62 @@
-/**
- * Task Management & Collaboration Models
- * 
- * Defines type-safe structures for tasks, workflows, priorities, comment threads,
- * and administrative audit tracking columns.
- */
+export type TaskStatus = 
+  | 'Created'
+  | 'Assigned'
+  | 'ToDo'
+  | 'InProgress'
+  | 'Review'
+  | 'Done'
+  | 'Blocked'
+  | 'Rejected'
+  | 'Cancelled';
 
-export type TaskStatus = 'ToDo' | 'InProgress' | 'Done';
-export type TaskPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
+export type TaskPriority = 'Low' | 'Medium' | 'High' | 'Critical' | 'Urgent';
+
+export interface SubTask {
+  id: number;
+  taskId: number;
+  title: string;
+  isCompleted: boolean;
+  sortOrder: number;
+  createdDate: string;
+}
+
+export interface TaskAttachment {
+  id: number;
+  taskId: number;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+  uploadedById: number;
+  uploadedByUserName: string;
+  createdDate: string;
+  downloadUrl: string;
+}
+
+export interface TaskComment {
+  id: number;
+  taskId: number;
+  userId: number;
+  userName: string;
+  userRole: string;
+  content: string;
+  parentCommentId?: number;
+  isEdited?: boolean;
+  createdAt: string;
+  replies?: TaskComment[];
+}
 
 export interface TaskItem {
   id: number;
   title: string;
   description: string;
   status: TaskStatus;
-  statusValue: number; // 1 = ToDo, 2 = InProgress, 3 = Done
+  statusValue: number;
   priority: TaskPriority;
-  priorityValue: number; // 1 = Low, 2 = Medium, 3 = High, 4 = Urgent
+  priorityValue: number;
+  category?: string;
+  tags?: string;
+  estimatedHours?: number;
+  actualHours?: number;
   dueDate?: string;
   teamId?: number;
   teamName?: string;
@@ -32,17 +73,27 @@ export interface TaskItem {
   isDeleted?: boolean;
   createdById?: number;
   commentsCount: number;
+  subtasksCount: number;
+  completedSubtasksCount: number;
+  attachmentsCount: number;
+  subTasks?: SubTask[];
+  attachments?: TaskAttachment[];
 }
 
 export interface CreateTaskRequest {
   title: string;
   description: string;
-  status: number; // 1 = ToDo, 2 = InProgress, 3 = Done
-  priority: number; // 1 = Low, 2 = Medium, 3 = High, 4 = Urgent
+  status: number;
+  priority: number;
+  category?: string;
+  tags?: string;
+  estimatedHours?: number;
+  actualHours?: number;
   dueDate?: string;
   teamId?: number | null;
   assignedToUserId?: number | null;
   remarks?: string;
+  initialSubtasks?: string[];
 }
 
 export interface UpdateTaskRequest {
@@ -50,27 +101,29 @@ export interface UpdateTaskRequest {
   description: string;
   status: number;
   priority: number;
+  category?: string;
+  tags?: string;
+  estimatedHours?: number;
+  actualHours?: number;
   dueDate?: string;
   teamId?: number | null;
   assignedToUserId?: number | null;
   remarks?: string;
 }
 
-export interface TaskComment {
-  id: number;
-  taskId: number;
-  userId: number;
-  userName: string;
-  userRole: string;
-  content: string;
-  createdAt: string;
-}
-
 export interface TaskFilter {
   search?: string;
   status?: number;
   priority?: number;
+  category?: string;
+  tag?: string;
   teamId?: number;
   assignedToUserId?: number;
   isOverdue?: boolean;
+  dueDateFrom?: string;
+  dueDateTo?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDescending?: boolean;
 }

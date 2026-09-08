@@ -3,9 +3,21 @@ using System.ComponentModel.DataAnnotations;
 namespace ManagementSystem.DTOs
 {
     /// <summary>
-    /// Request payload for submitting a discussion comment on a work task.
+    /// Request payload for submitting a discussion comment or reply.
     /// </summary>
     public class CreateCommentDto
+    {
+        [Required]
+        [MaxLength(1000)]
+        public string Content { get; set; } = string.Empty;
+
+        public int? ParentCommentId { get; set; }
+    }
+
+    /// <summary>
+    /// Request payload for updating an existing comment.
+    /// </summary>
+    public class UpdateCommentDto
     {
         [Required]
         [MaxLength(1000)]
@@ -23,6 +35,9 @@ namespace ManagementSystem.DTOs
         public string UserName { get; set; } = string.Empty;
         public string UserRole { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
+        public int? ParentCommentId { get; set; }
+        public bool IsEdited { get; set; } = false;
         public DateTime CreatedAt { get; set; }
+        public List<CommentDto> Replies { get; set; } = new List<CommentDto>();
     }
 }

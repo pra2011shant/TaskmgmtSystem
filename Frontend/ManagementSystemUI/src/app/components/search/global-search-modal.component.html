@@ -1,0 +1,55 @@
+<div class="search-backdrop" (click)="close.emit()">
+  <div class="search-dialog" (click)="$event.stopPropagation()">
+    <div class="search-header">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input 
+        type="text" 
+        class="search-input" 
+        placeholder="Search tasks, teammates, departments... (ESC to close)" 
+        [ngModel]="searchQuery()" 
+        (ngModelChange)="onSearch($event)"
+        autofocus
+      />
+      <button class="search-close-btn" (click)="close.emit()">
+        <kbd>ESC</kbd>
+      </button>
+    </div>
+
+    <div class="search-body">
+      @if (isLoading()) {
+        <div class="search-loading">
+          <div class="spinner"></div>
+          <span>Searching workspace...</span>
+        </div>
+      } @else if (results().length > 0) {
+        <div class="search-results-list">
+          @for (item of results(); track item.id + item.type) {
+            <div class="search-result-item" (click)="navigate(item)">
+              <div class="result-badge" [class.badge-task]="item.type === 'Task'" [class.badge-user]="item.type === 'User'" [class.badge-team]="item.type === 'Team'">
+                {{ item.type }}
+              </div>
+              <div class="result-info">
+                <div class="result-title">{{ item.title }}</div>
+                <div class="result-subtitle">{{ item.subtitle }}</div>
+              </div>
+              @if (item.tag) {
+                <div class="result-tag">{{ item.tag }}</div>
+              }
+            </div>
+          }
+        </div>
+      } @else if (searchQuery().length >= 2) {
+        <div class="search-empty">
+          <p>No results found for "<strong>{{ searchQuery() }}</strong>"</p>
+        </div>
+      } @else {
+        <div class="search-hint">
+          <span>Type at least 2 characters to search across Tasks, Teams, and Members.</span>
+        </div>
+      }
+    </div>
+  </div>
+</div>
