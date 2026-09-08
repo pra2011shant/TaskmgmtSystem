@@ -359,3 +359,53 @@
 }
 
 .text-danger { color: #f87171; }
+
+/* Bulk Toolbar */
+.bulk-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.bulk-count {
+  font-size: 0.9rem;
+  color: #c7d2fe;
+}
+
+.bulk-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-decoration: underline;
+}
+
+.selected-row td {
+  background: rgba(99, 102, 241, 0.08) !important;
+}

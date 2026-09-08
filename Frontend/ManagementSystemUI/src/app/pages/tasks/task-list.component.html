@@ -270,9 +270,27 @@
     } @else {
       <!-- DATA TABLE VIEW -->
       <div class="table-card">
+        <!-- Bulk Action Toolbar -->
+        @if (selectedTaskIds().length > 0) {
+          <div class="bulk-toolbar">
+            <span class="bulk-count">Selected: <strong>{{ selectedTaskIds().length }}</strong> tasks</span>
+            <div class="bulk-buttons">
+              <button class="btn btn-secondary btn-sm" (click)="bulkUpdateStatus(3)">Mark In Progress</button>
+              <button class="btn btn-primary btn-sm" (click)="bulkUpdateStatus(5)">Mark Done</button>
+              @if (authService.isManager()) {
+                <button class="btn btn-danger btn-sm" (click)="bulkDelete()">Delete Selected</button>
+              }
+              <button class="btn-link btn-sm" (click)="selectedTaskIds.set([])">Deselect All</button>
+            </div>
+          </div>
+        }
+
         <table class="data-table">
           <thead>
             <tr>
+              <th style="width: 40px;">
+                <input type="checkbox" (change)="toggleSelectAll($event)" [checked]="selectedTaskIds().length === tasks().length && tasks().length > 0" />
+              </th>
               <th>ID</th>
               <th>Task Summary</th>
               <th>Status</th>
@@ -285,7 +303,10 @@
           </thead>
           <tbody>
             @for (task of tasks(); track task.id) {
-              <tr (click)="openDetailModal(task)">
+              <tr (click)="openDetailModal(task)" [class.selected-row]="isTaskSelected(task.id)">
+                <td (click)="$event.stopPropagation()">
+                  <input type="checkbox" [checked]="isTaskSelected(task.id)" (change)="toggleSelectTask(task.id, $event)" />
+                </td>
                 <td><span class="task-id-badge">#{{ task.id }}</span></td>
                 <td>
                   <div class="table-title">{{ task.title }}</div>

@@ -9,6 +9,7 @@ import { TaskService } from '../../core/services/task.service';
 import { TeamService } from '../../core/services/team.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import { BulkService } from '../../core/services/bulk.service';
 import { TaskModalComponent } from './task-modal.component';
 import { TaskDetailModalComponent } from './task-detail-modal.component';
 import { StatusBadgeComponent } from '../../components/ui/status-badge.component';
@@ -35,11 +36,13 @@ export class TaskListComponent implements OnInit {
   taskService = inject(TaskService);
   teamService = inject(TeamService);
   authService = inject(AuthService);
+  bulkService = inject(BulkService);
   toast = inject(ToastService);
 
   tasks = signal<TaskItem[]>([]);
   teams = signal<Team[]>([]);
   loading = signal(true);
+  selectedTaskIds = signal<number[]>([]);
 
   viewMode = signal<'board' | 'table'>('board');
   
@@ -212,5 +215,58 @@ export class TaskListComponent implements OnInit {
   isOverdue(dueDate?: string, status?: string): boolean {
     if (!dueDate || status === 'Done') return false;
     return new Date(dueDate) < new Date();
+  }
+
+  // Bulk Selection & Operations
+  toggleSelectAll(event: any) {
+    if (event.target.checked) {
+      this.selectedTaskIds.set(this.tasks().map(t => t.id));
+    } else {
+      this.selectedTaskIds.set([]);
+    }
+  }
+
+  toggleSelectTask(taskId: number, event: any) {
+    event.stopPropagation();
+    const current = this.selectedTaskIds();
+    if (current.includes(taskId)) {
+      this.selectedTaskIds.set(current.filter(id => id !== taskId));
+    } else {
+      this.selectedTaskIds.set([...current, taskId]);
+    }
+  }
+
+  isTaskSelected(taskId: number): boolean {
+    return this.selectedTaskIds().includes(taskId);
+  }
+
+  bulkUpdateStatus(newStatus: number) {
+    const ids = this.selectedTaskIds();
+    if (ids.length === 0) return;
+
+    this.bulkService.bulkUpdateStatus(ids, newStatus).subscribe({
+      next: (res) => {
+        this.toast.success(res.message || 'Bulk status updated.');
+        this.selectedTaskIds.set([]);
+        this.loadTasks();
+      },
+      error: () => this.toast.error('Failed to update tasks in bulk.')
+    });
+  }
+
+  bulkDelete() {
+    const ids = this.selectedTaskIds();
+    if (ids.length === 0) return;
+
+    if (confirm(`Are you sure you want to delete ${ids.length} selected tasks?`)) {
+      this.bulkService.bulkDelete(ids).subscribe({
+        next: (res) => {
+          this.toast.success(res.message || 'Tasks deleted.');
+          this.selectedTaskIds.set([]);
+          this.loadTasks();
+        },
+        error: () => this.toast.error('Failed to delete tasks.')
+      });
+    }
   }
 }
