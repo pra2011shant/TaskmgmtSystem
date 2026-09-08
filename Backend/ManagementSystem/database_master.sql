@@ -420,27 +420,107 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE sp_GetLeaderboard
+CREATE OR ALTER PROCEDURE sp_GetDashboardStats
+    @UserId INT = NULL,
+    @Role NVARCHAR(50) = 'Admin'
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    -- Aggregate summary metrics with NOLOCK for maximum throughput
+    SELECT 
+        COUNT(1) AS TotalTasks,
+        COUNT(CASE WHEN t.Status = 5 THEN 1 END) AS CompletedTasks,
+        COUNT(CASE WHEN t.Status = 3 THEN 1 END) AS InProgressTasks,
+        COUNT(CASE WHEN t.Status IN (0, 1, 2) THEN 1 END) AS PendingTasks,
+        COUNT(CASE WHEN t.Status != 5 AND t.DueDate < SYSUTCDATETIME() THEN 1 END) AS OverdueTasks,
+        COUNT(CASE WHEN t.Priority = 4 THEN 1 END) AS CriticalPriorityTasks,
+        COUNT(CASE WHEN t.Priority = 3 THEN 1 END) AS HighPriorityTasks,
+        COUNT(CASE WHEN t.Priority = 2 THEN 1 END) AS MediumPriorityTasks,
+        COUNT(CASE WHEN t.Priority = 1 THEN 1 END) AS LowPriorityTasks,
+        ISNULL(SUM(t.ActualHours), 0) AS TotalHoursLogged
+    FROM Tasks t WITH (NOLOCK)
+    WHERE t.IsDeleted = 0
+      AND (@Role = 'Admin' OR @Role = 'Manager' OR t.AssignedToUserId = @UserId);
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_GetUserProductivityReport
+AS
+BEGIN
+    SET NOCOUNT ON;
+
     SELECT 
         u.Id AS UserId,
         u.FullName,
+        u.Email,
+        u.Role,
         u.Department,
+        COUNT(t.Id) AS TotalAssignedTasks,
         COUNT(CASE WHEN t.Status = 5 THEN 1 END) AS CompletedTasks,
+        COUNT(CASE WHEN t.Status = 3 THEN 1 END) AS InProgressTasks,
         COUNT(CASE WHEN t.Status != 5 AND t.DueDate < SYSUTCDATETIME() THEN 1 END) AS OverdueTasks,
-        SUM(ISNULL(t.ActualHours, 0)) AS TotalHoursLogged,
+        ISNULL(SUM(t.ActualHours), 0) AS TotalHoursLogged,
         CAST(
-            (COUNT(CASE WHEN t.Status = 5 THEN 1 END) * 10) - 
-            (COUNT(CASE WHEN t.Status != 5 AND t.DueDate < SYSUTCDATETIME() THEN 1 END) * 5)
-            AS INT
-        ) AS ProductivityScore
-    FROM Users u
-    LEFT JOIN Tasks t ON u.Id = t.AssignedToUserId AND t.IsDeleted = 0
+            CASE 
+                WHEN COUNT(t.Id) > 0 
+                THEN (CAST(COUNT(CASE WHEN t.Status = 5 THEN 1 END) AS FLOAT) / COUNT(t.Id)) * 100 
+                ELSE 0 
+            END AS DECIMAL(5,2)
+        ) AS CompletionPercentage
+    FROM Users u WITH (NOLOCK)
+    LEFT JOIN Tasks t WITH (NOLOCK) ON u.Id = t.AssignedToUserId AND t.IsDeleted = 0
     WHERE u.IsDeleted = 0
-    GROUP BY u.Id, u.FullName, u.Department
-    ORDER BY ProductivityScore DESC, CompletedTasks DESC;
+    GROUP BY u.Id, u.FullName, u.Email, u.Role, u.Department
+    ORDER BY CompletedTasks DESC, TotalHoursLogged DESC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_GetTeamProductivityReport
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        tm.Id AS TeamId,
+        tm.Name AS TeamName,
+        mgr.FullName AS ManagerName,
+        (SELECT COUNT(1) FROM TeamMembers tmb WITH (NOLOCK) WHERE tmb.TeamId = tm.Id AND tmb.IsDeleted = 0) AS MembersCount,
+        COUNT(t.Id) AS TotalTasks,
+        COUNT(CASE WHEN t.Status = 5 THEN 1 END) AS CompletedTasks,
+        COUNT(CASE WHEN t.Status = 3 THEN 1 END) AS InProgressTasks,
+        COUNT(CASE WHEN t.Status != 5 AND t.DueDate < SYSUTCDATETIME() THEN 1 END) AS OverdueTasks,
+        CAST(
+            CASE 
+                WHEN COUNT(t.Id) > 0 
+                THEN (CAST(COUNT(CASE WHEN t.Status = 5 THEN 1 END) AS FLOAT) / COUNT(t.Id)) * 100 
+                ELSE 0 
+            END AS DECIMAL(5,2)
+        ) AS VelocityRate
+    FROM Teams tm WITH (NOLOCK)
+    LEFT JOIN Users mgr WITH (NOLOCK) ON tm.ManagerId = mgr.Id
+    LEFT JOIN Tasks t WITH (NOLOCK) ON tm.Id = t.TeamId AND t.IsDeleted = 0
+    WHERE tm.IsDeleted = 0
+    GROUP BY tm.Id, tm.Name, mgr.FullName
+    ORDER BY CompletedTasks DESC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_BulkUpdateTaskStatus
+    @TaskIdsCsv NVARCHAR(MAX),
+    @NewStatus INT,
+    @UpdatedById INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE Tasks 
+    SET Status = @NewStatus,
+        LastUpdatedDate = SYSUTCDATETIME()
+    WHERE Id IN (SELECT CAST(value AS INT) FROM STRING_SPLIT(@TaskIdsCsv, ','))
+      AND IsDeleted = 0;
+
+    SELECT @@ROWCOUNT AS UpdatedCount;
 END;
 GO
 

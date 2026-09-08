@@ -73,6 +73,9 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
         toast.warning('Rate limit exceeded. Please wait a moment before retrying.');
       } else if (error.status === 0) {
         toast.error('Cannot connect to backend server. Ensure API is running on port 5000.');
+      } else if (error.status >= 500) {
+        const msg = error.error?.message || 'Server encountered an unexpected error. Please try again.';
+        toast.error(msg);
       }
       return throwError(() => error);
     })

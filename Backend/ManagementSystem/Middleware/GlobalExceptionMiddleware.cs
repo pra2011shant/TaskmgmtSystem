@@ -30,14 +30,28 @@ namespace ManagementSystem.Middleware
         private static Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
             context.Response.ContentType = "application/json";
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+
+            var statusCode = exception switch
+            {
+                KeyNotFoundException => HttpStatusCode.NotFound,
+                UnauthorizedAccessException => HttpStatusCode.Unauthorized,
+                ArgumentException => HttpStatusCode.BadRequest,
+                InvalidOperationException => HttpStatusCode.BadRequest,
+                Microsoft.EntityFrameworkCore.DbUpdateException => HttpStatusCode.Conflict,
+                _ => HttpStatusCode.InternalServerError
+            };
+
+            context.Response.StatusCode = (int)statusCode;
 
             var response = new
             {
                 success = false,
-                statusCode = context.Response.StatusCode,
-                message = "An unexpected error occurred processing your request. Please try again later.",
+                statusCode = (int)statusCode,
+                message = statusCode == HttpStatusCode.InternalServerError 
+                    ? "An unexpected internal error occurred. Our engineering team has been notified."
+                    : exception.Message,
                 details = exception.Message,
+                errorType = exception.GetType().Name,
                 timestamp = DateTime.UtcNow
             };
 
