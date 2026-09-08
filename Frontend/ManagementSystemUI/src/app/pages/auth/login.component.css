@@ -49,54 +49,6 @@
   color: var(--slate-500);
 }
 
-.demo-login-box {
-  background: var(--slate-50);
-  border: 1px dashed var(--slate-300);
-  border-radius: var(--radius-md);
-  padding: 0.875rem;
-  margin-bottom: 1.5rem;
-}
-
-.demo-title {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--slate-600);
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.demo-buttons {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
-}
-
-.demo-btn {
-  padding: 0.5rem 0.25rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--slate-200);
-  background: #ffffff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  transition: all 0.15s ease;
-}
-
-.demo-admin { color: #7c3aed; }
-.demo-admin:hover { background: #f5f3ff; border-color: #c4b5fd; }
-
-.demo-manager { color: #0284c7; }
-.demo-manager:hover { background: #f0f9ff; border-color: #7dd3fc; }
-
-.demo-user { color: #059669; }
-.demo-user:hover { background: #ecfdf5; border-color: #6ee7b7; }
-
 .input-with-icon {
   position: relative;
   display: flex;

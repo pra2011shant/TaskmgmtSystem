@@ -86,15 +86,15 @@ erDiagram
 
 ---
 
-## 🔑 Pre-Configured Demo Accounts
+## 🔑 Initial System Accounts (Provisioned via DbInitializer / Master SQL)
 
-| Role | Email | Password | Scope |
-|---|---|---|---|
-| **Admin** | `admin@system.com` | `Admin@123` | Full system governance, permissions, user provisioning & audit logs |
-| **Manager** | `manager@system.com` | `Manager@123` | Team management, task creation/assignment, velocity reports |
-| **User (Developer)** | `rahul@system.com` | `User@123` | Task execution, Kanban progression, subtasks & comments |
-| **User (Designer)** | `priya@system.com` | `User@123` | UI/UX deliverables, attachments & review stage |
-| **User (QA)** | `user@system.com` | `User@123` | QA testing, test automation, review verification |
+| Role | Initial Seed Email | Scope |
+|---|---|---|
+| **Admin** | `admin@system.com` | Full system governance, permissions, user provisioning & audit logs |
+| **Manager** | `manager@system.com` | Team management, task creation/assignment, velocity reports |
+| **User (Developer)** | `rahul@system.com` | Task execution, Kanban progression, subtasks & comments |
+| **User (Designer)** | `priya@system.com` | UI/UX deliverables, attachments & review stage |
+| **User (QA)** | `user@system.com` | QA testing, test automation, review verification |
 
 ---
 

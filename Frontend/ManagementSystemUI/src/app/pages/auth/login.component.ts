@@ -31,12 +31,6 @@ export class LoginComponent {
   confirmPassword = '';
   forgotLoading = signal(false);
 
-  fillDemo(em: string, pass: string) {
-    this.email = em;
-    this.password = pass;
-    this.onSubmit();
-  }
-
   onSubmit() {
     if (!this.email || !this.password) {
       this.toast.warning('Please enter both email and password.');

@@ -9,22 +9,6 @@
       <p>Sign in to manage your teams, tasks, and collaboration.</p>
     </div>
 
-    <!-- Quick Demo Switcher -->
-    <div class="demo-login-box">
-      <span class="demo-title"><i class="fa-solid fa-bolt"></i> 1-Click Demo Login:</span>
-      <div class="demo-buttons">
-        <button type="button" class="demo-btn demo-admin" (click)="fillDemo('admin@system.com', 'Admin@123')">
-          <i class="fa-solid fa-shield-halved"></i> Admin
-        </button>
-        <button type="button" class="demo-btn demo-manager" (click)="fillDemo('manager@system.com', 'Manager@123')">
-          <i class="fa-solid fa-user-tie"></i> Manager
-        </button>
-        <button type="button" class="demo-btn demo-user" (click)="fillDemo('rahul@system.com', 'User@123')">
-          <i class="fa-solid fa-user"></i> User
-        </button>
-      </div>
-    </div>
-
     <!-- Login Form -->
     <form (ngSubmit)="onSubmit()" class="auth-form">
       <div class="form-group">

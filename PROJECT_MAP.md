@@ -13,7 +13,7 @@ Below is the complete visual map of every screen, its URL, access permissions, a
 [ Public Zone ]
        │
        └──> /login (Sign In Screen)
-              ├── 1-Click Demo Quick Logins (Admin, Manager, User)
+              ├── Standard Secure Authentication (Email & Password)
               ├── Password Eye Toggle (Show/Hide)
               └── Corporate Security Notice (Accounts provisioned by Admin)
 
