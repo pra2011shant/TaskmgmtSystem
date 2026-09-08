@@ -16,6 +16,25 @@
   </div>
 
   <div class="navbar-right">
+    <!-- Active Stopwatch Live Ticker -->
+    <div *ngIf="activeTimer()" class="active-stopwatch-pill">
+      <span class="stopwatch-pulse"></span>
+      <i class="fa-solid fa-stopwatch"></i>
+      <span class="timer-display">{{ timerElapsed() }}</span>
+      <span class="timer-task" [title]="activeTimer()?.taskTitle">#{{ activeTimer()?.taskId }}</span>
+      <button class="stop-btn" (click)="stopActiveTimer()" title="Stop Timer & Log Time">⏹️</button>
+    </div>
+
+    <!-- Theme Toggle (Dark / Light Mode) -->
+    <button 
+      class="theme-toggle-btn" 
+      (click)="themeService.toggleTheme()" 
+      [title]="themeService.currentTheme() === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+    >
+      <i *ngIf="themeService.currentTheme() === 'dark'" class="fa-solid fa-sun"></i>
+      <i *ngIf="themeService.currentTheme() === 'light'" class="fa-solid fa-moon"></i>
+    </button>
+
     <!-- Global Universal Search Trigger -->
     <button class="nav-search-btn" (click)="showSearchModal.set(true)" title="Search workspace (Ctrl+K)">
       <svg class="search-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

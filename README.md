@@ -23,30 +23,36 @@ graph TD
 
 ---
 
-## 🌟 Comprehensive 20-Point Feature Matrix
+## 🌟 Enterprise Feature Matrix
 
 | # | Feature | Details & Implementation |
 |---|---|---|
-| 1 | 🚀 **Advanced Task Management** | Priority (*Low, Medium, High, Critical*), Due Dates, Categories, Tags, Estimated vs Actual Hours, Subtasks checklist |
-| 2 | 📊 **Advanced Dashboard** | KPI metric counters (*Total, Completed, In Progress, Overdue, Pending*), distribution breakdown charts, recent activity stream |
-| 3 | 🔔 **Advanced Notification System** | Lifecycle triggers (*Task assigned, Reassigned, Status changed, @mentions, Overdue*), Notification Center & badge count |
-| 4 | 💬 **Better Collaboration** | Threaded comments, edit/delete own comments, `@username` auto-mentions, activity timeline |
-| 5 | 👥 **Better Team Management** | Department cards, member roster, team leads, capacity balancing, team-wise tasks |
-| 6 | 🔐 **Strong Security** | JWT Access Token + Refresh Token rotation, PBKDF2/BCrypt hashing, Account lockout (5 failed attempts), Rate limiting, Global Exception middleware |
-| 7 | 📝 **Audit Log System** | Comprehensive entity mutation tracking, Old vs New JSON diff inspection, IP address logging, timestamping |
-| 8 | 📎 **File Attachments** | Multi-file upload, download streaming, and deletion for PDF, Excel, PNG/JPG images |
-| 9 | 🔄 **Task Workflow** | Multi-stage lifecycle (*Created $\rightarrow$ Assigned $\rightarrow$ To Do $\rightarrow$ In Progress $\rightarrow$ Review $\rightarrow$ Done / Blocked / Cancelled*) |
-| 10 | 🧑💼 **Admin Control Center** | Dedicated admin panel with Users, Teams, Permissions Matrix, System Telemetry, and Audit Logs Explorer |
-| 11 | 🛡️ **Permission Management** | Granular PBAC (`Task.Create`, `Task.Delete`, `Team.Manage`, `Audit.View`, `Reports.Export`), Angular `*hasPermission` directive |
-| 12 | 📅 **Calendar View** | Interactive month grid & week planner with clickable task badges, priority color coding, and quick-create day slots |
-| 13 | 📋 **Kanban Board** | Smooth drag-and-drop cards across workflow columns with optimistic UI updates |
-| 14 | 📈 **Reports & Export Engine** | User productivity telemetry, Team velocity stats, Overdue SLA list, 1-click Export to **CSV**, **Excel**, and **Printable PDF/HTML** |
-| 15 | 🔎 **Global Universal Search** | Spotlight modal search (`Ctrl + K`) across Tasks, Users, and Teams with instant deep links |
-| 16 | ⚡ **Performance Optimization** | Async/await throughout, response compression (Brotli/Gzip), DB non-clustered indexing, query projection |
-| 17 | 🧪 **Comprehensive Testing** | Unit tests for PasswordHasher, JwtHelper, Permissions, and Task item models via xUnit |
-| 18 | 🐳 **Docker Multi-Container** | Multi-container deployment for SQL Server, ASP.NET Core Web API, and Angular Frontend via Docker Compose |
-| 19 | 🔄 **CI/CD Pipeline** | GitHub Actions workflow (`.github/workflows/ci.yml`) for automated build, test validation, and compilation |
-| 20 | 📚 **API Documentation** | Swagger OpenAPI with JWT Bearer authentication support and Postman collection |
+| 1 | 📁 **Projects & Milestones** | High-level project containers, deliverable milestone roadmaps, budget allocation, completion percentages |
+| 2 | ⏱️ **Live Stopwatch Time Tracker** | Active running ticker in navbar, start/stop stopwatch sessions, task manual work hours logging |
+| 3 | 🏆 **Productivity Leaderboard** | Gamified podium rankings (*Gold, Silver, Bronze*), streaks, points formula, achievement badges |
+| 4 | ⚡ **Real-Time SignalR Hub** | Instant WebSocket synchronization for task updates, status changes, and threaded discussions (`/hubs/tasks`) |
+| 5 | 🌓 **Dark / Light Mode Themes** | Premium curated themes with smooth transitions and persistent browser storage |
+| 6 | 📦 **Bulk Batch Operations** | Multi-select task batch status updates, mass reassignment, priority modification, and soft deletion |
+| 7 | 🗄️ **Master SQL Database Script** | Single consolidated `database_master.sql` containing 18 tables, indexes, stored procedures, and full dummy data |
+| 8 | 🚀 **Advanced Task Management** | Priority (*Low, Medium, High, Critical*), Due Dates, Categories, Tags, Estimated vs Actual Hours, Subtasks checklist |
+| 9 | 📊 **Advanced Dashboard** | KPI metric counters (*Total, Completed, In Progress, Overdue, Pending*), distribution breakdown charts, recent activity stream |
+| 10 | 🔔 **Advanced Notification System** | Lifecycle triggers (*Task assigned, Reassigned, Status changed, @mentions, Overdue*), Notification Center & badge count |
+| 11 | 💬 **Better Collaboration** | Threaded comments, edit/delete own comments, `@username` auto-mentions, activity timeline |
+| 12 | 👥 **Better Team Management** | Department cards, member roster, team leads, capacity balancing, team-wise tasks |
+| 13 | 🔐 **Strong Security** | JWT Access Token + Refresh Token rotation, PBKDF2/BCrypt hashing, Account lockout (5 failed attempts), Rate limiting, Global Exception middleware |
+| 14 | 📝 **Audit Log System** | Comprehensive entity mutation tracking, Old vs New JSON diff inspection, IP address logging, timestamping |
+| 15 | 📎 **File Attachments** | Multi-file upload, download streaming, and deletion for PDF, Excel, PNG/JPG images |
+| 16 | 🔄 **Task Workflow** | Multi-stage lifecycle (*Created $\rightarrow$ Assigned $\rightarrow$ To Do $\rightarrow$ In Progress $\rightarrow$ Review $\rightarrow$ Done / Blocked / Cancelled*) |
+| 17 | 🧑‍💼 **Admin Control Center** | Dedicated admin panel with Users, Teams, Permissions Matrix, System Telemetry, and Audit Logs Explorer |
+| 18 | 🛡️ **Permission Management** | Granular PBAC (`Task.Create`, `Task.Delete`, `Team.Manage`, `Audit.View`, `Reports.Export`), Angular `*hasPermission` directive |
+| 19 | 📅 **Calendar View** | Interactive month grid & week planner with clickable task badges, priority color coding, and quick-create day slots |
+| 20 | 📋 **Kanban Board** | Smooth drag-and-drop cards across workflow columns with optimistic UI updates |
+| 21 | 📈 **Reports & Export Engine** | User productivity telemetry, Team velocity stats, Overdue SLA list, 1-click Export to **CSV**, **Excel**, and **Printable PDF/HTML** |
+| 22 | 🔎 **Global Universal Search** | Spotlight modal search (`Ctrl + K`) across Tasks, Users, and Teams with instant deep links |
+| 23 | ⚡ **Performance Optimization** | Async/await throughout, response compression (Brotli/Gzip), DB non-clustered indexing, query projection |
+| 24 | 🧪 **Comprehensive Testing** | Unit tests for PasswordHasher, JwtHelper, Permissions, and Task item models via xUnit |
+| 25 | 🐳 **Docker Multi-Container** | Multi-container deployment for SQL Server, ASP.NET Core Web API, and Angular Frontend via Docker Compose |
+| 26 | 🔄 **CI/CD Pipeline** | GitHub Actions workflow (`.github/workflows/ci.yml`) for automated build, test validation, and compilation |
 
 ---
 

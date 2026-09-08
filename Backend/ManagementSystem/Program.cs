@@ -25,6 +25,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // =========================================================================
 // 2. DEPENDENCY INJECTION (Domain Services & Helper Registrations)
 // =========================================================================
+builder.Services.AddSignalR();
 builder.Services.AddScoped<IJwtHelper, JwtHelper>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
@@ -33,6 +34,8 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<ITimeTrackingService, TimeTrackingService>();
 
 // Authorization handlers for PBAC
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
@@ -62,6 +65,19 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtSettings["Audience"] ?? "ManagementSystemClient",
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
+    };
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -214,5 +230,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<ManagementSystem.Hubs.TaskHub>("/hubs/tasks");
 
 app.Run();

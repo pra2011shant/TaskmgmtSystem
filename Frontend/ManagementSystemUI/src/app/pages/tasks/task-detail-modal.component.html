@@ -59,6 +59,9 @@
       <button class="tab-btn" [class.active]="activeTab() === 'comments'" (click)="activeTab.set('comments')">
         Discussions ({{ comments().length }})
       </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'timelogs'" (click)="activeTab.set('timelogs')">
+        ⏱️ Time Logs ({{ timeLogs().length }})
+      </button>
     </div>
 
     <div class="modal-body">
@@ -260,6 +263,57 @@
             } @empty {
               <p class="empty-text">No comments on this task yet.</p>
             }
+          </div>
+        </div>
+      }
+
+      @if (activeTab() === 'timelogs') {
+        <div class="timelogs-tab-content">
+          <!-- Stopwatch Controls Card -->
+          <div class="timer-control-card">
+            <div class="timer-card-header">
+              <span class="timer-icon">⏱️</span>
+              <div>
+                <h4>Live Stopwatch Time Tracker</h4>
+                <p class="text-muted">Track work duration accurately while executing this task</p>
+              </div>
+            </div>
+            <div class="timer-card-actions">
+              <button *ngIf="!isTimerRunning()" class="btn btn-primary" (click)="startStopwatch()">
+                ▶️ Start Stopwatch
+              </button>
+              <button *ngIf="isTimerRunning()" class="btn btn-danger" (click)="stopStopwatch()">
+                ⏹️ Stop & Log Duration
+              </button>
+            </div>
+          </div>
+
+          <!-- Manual Time Log Entry Form -->
+          <div class="manual-log-form">
+            <h5>Log Work Hours Manually</h5>
+            <div class="log-form-row">
+              <input type="number" [(ngModel)]="manualMinutes" class="form-control" placeholder="Minutes (e.g. 45)" min="1" />
+              <input type="text" [(ngModel)]="manualDesc" class="form-control flex-2" placeholder="Work summary / commit ref..." />
+              <button class="btn btn-secondary" (click)="logManualTime()">+ Log Duration</button>
+            </div>
+          </div>
+
+          <!-- Time Logs Table -->
+          <div class="timelogs-history">
+            <h5>Work Log History</h5>
+            <div class="log-items-list">
+              <div *ngFor="let log of timeLogs()" class="log-item-card">
+                <div class="log-item-left">
+                  <span class="log-user">{{ log.userName }}</span>
+                  <span class="log-desc">{{ log.description || 'Task work session' }}</span>
+                </div>
+                <div class="log-item-right">
+                  <span class="log-duration">{{ log.durationMinutes }} mins ({{ (log.durationMinutes / 60) | number:'1.1-1' }} hrs)</span>
+                  <span class="log-date">{{ log.startTime | date:'short' }}</span>
+                </div>
+              </div>
+              <p *ngIf="timeLogs().length === 0" class="empty-text">No time sessions logged for this task yet.</p>
+            </div>
           </div>
         </div>
       }

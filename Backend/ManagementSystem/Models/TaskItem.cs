@@ -25,10 +25,25 @@ namespace ManagementSystem.Models
         Urgent = 4
     }
 
+    /// <summary>
+    /// Database Table: [Tasks]
+    /// Purpose: Core work item entity representing deliverables, Kanban progress, time tracking, attachments and discussion threads.
+    /// </summary>
+    [Table("Tasks")]
     public class TaskItem : BaseEntity
     {
         [Key]
         public int Id { get; set; }
+
+        public int? ProjectId { get; set; }
+
+        [ForeignKey(nameof(ProjectId))]
+        public Project? Project { get; set; }
+
+        public int? MilestoneId { get; set; }
+
+        [ForeignKey(nameof(MilestoneId))]
+        public Milestone? Milestone { get; set; }
 
         [Required]
         [MaxLength(200)]
@@ -90,5 +105,8 @@ namespace ManagementSystem.Models
         public ICollection<TaskComment> Comments { get; set; } = new List<TaskComment>();
         public ICollection<SubTask> SubTasks { get; set; } = new List<SubTask>();
         public ICollection<TaskAttachment> Attachments { get; set; } = new List<TaskAttachment>();
+        public ICollection<TaskDependency> Dependencies { get; set; } = new List<TaskDependency>();
+        public ICollection<TaskWatcher> Watchers { get; set; } = new List<TaskWatcher>();
+        public ICollection<TaskTimeLog> TimeLogs { get; set; } = new List<TaskTimeLog>();
     }
 }

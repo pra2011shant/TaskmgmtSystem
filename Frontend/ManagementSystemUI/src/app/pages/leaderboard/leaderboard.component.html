@@ -1,0 +1,134 @@
+<div class="leaderboard-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">🏆 Productivity Leaderboard</h1>
+      <p class="page-subtitle">Recognizing high-velocity champions, sprint milestones, and consistent contributors</p>
+    </div>
+    <div class="header-badge">
+      <span class="pulse-dot"></span> Live Rankings
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="loading-state">
+    <div class="spinner"></div>
+    <p>Calculating real-time team productivity scores...</p>
+  </div>
+
+  <!-- Podium Section (Top 3) -->
+  <div *ngIf="!isLoading() && leaderboard().length >= 3" class="podium-section">
+    <!-- 2nd Place -->
+    <div class="podium-card silver">
+      <div class="crown">🥈</div>
+      <div class="avatar-ring silver-ring">
+        <span class="avatar-initials">{{ leaderboard()[1].fullName.substring(0, 2).toUpperCase() }}</span>
+      </div>
+      <h3 class="podium-name">{{ leaderboard()[1].fullName }}</h3>
+      <span class="podium-badge">{{ leaderboard()[1].badge }}</span>
+      <div class="podium-score">{{ leaderboard()[1].totalScore }} pts</div>
+      <div class="podium-stats">
+        <span>✅ {{ leaderboard()[1].completedTasksCount }} Tasks</span>
+        <span>🔥 {{ leaderboard()[1].streakDays }}d Streak</span>
+      </div>
+      <div class="podium-step step-2">2</div>
+    </div>
+
+    <!-- 1st Place (Gold Champion) -->
+    <div class="podium-card gold">
+      <div class="crown">👑</div>
+      <div class="avatar-ring gold-ring">
+        <span class="avatar-initials">{{ leaderboard()[0].fullName.substring(0, 2).toUpperCase() }}</span>
+      </div>
+      <h3 class="podium-name">{{ leaderboard()[0].fullName }}</h3>
+      <span class="podium-badge champion-badge">{{ leaderboard()[0].badge }}</span>
+      <div class="podium-score gold-score">{{ leaderboard()[0].totalScore }} pts</div>
+      <div class="podium-stats">
+        <span>✅ {{ leaderboard()[0].completedTasksCount }} Tasks</span>
+        <span>⏱️ {{ leaderboard()[0].totalHoursLogged }}h Logged</span>
+      </div>
+      <div class="podium-step step-1">1</div>
+    </div>
+
+    <!-- 3rd Place -->
+    <div class="podium-card bronze">
+      <div class="crown">🥉</div>
+      <div class="avatar-ring bronze-ring">
+        <span class="avatar-initials">{{ leaderboard()[2].fullName.substring(0, 2).toUpperCase() }}</span>
+      </div>
+      <h3 class="podium-name">{{ leaderboard()[2].fullName }}</h3>
+      <span class="podium-badge">{{ leaderboard()[2].badge }}</span>
+      <div class="podium-score">{{ leaderboard()[2].totalScore }} pts</div>
+      <div class="podium-stats">
+        <span>✅ {{ leaderboard()[2].completedTasksCount }} Tasks</span>
+        <span>🔥 {{ leaderboard()[2].streakDays }}d Streak</span>
+      </div>
+      <div class="podium-step step-3">3</div>
+    </div>
+  </div>
+
+  <!-- Leaderboard Table -->
+  <div *ngIf="!isLoading()" class="rankings-card">
+    <div class="table-header-bar">
+      <h3>All Contributors ({{ leaderboard().length }})</h3>
+      <span class="scoring-info">Formula: Completed (15pt) + On-Time (10pt) + Urgent (5pt) + Hours (2pt)</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Employee / Contributor</th>
+            <th>Role / Dept</th>
+            <th>Badge & Title</th>
+            <th>Tasks Completed</th>
+            <th>On-Time Delivery</th>
+            <th>Hours Logged</th>
+            <th>Streak</th>
+            <th class="text-right">Total Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of leaderboard()" [class.top-three]="user.rank <= 3">
+            <td>
+              <span class="rank-indicator" [ngClass]="getRankBadgeClass(user.rank)">
+                #{{ user.rank }}
+              </span>
+            </td>
+            <td>
+              <div class="user-cell">
+                <div class="user-avatar-mini">{{ user.fullName.substring(0, 2).toUpperCase() }}</div>
+                <div>
+                  <div class="user-name">{{ user.fullName }}</div>
+                  <div class="user-email">{{ user.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="dept-pill">{{ user.department || user.role }}</span>
+            </td>
+            <td>
+              <span class="user-badge-tag">{{ user.badge }}</span>
+            </td>
+            <td>
+              <strong class="stat-highlight">{{ user.completedTasksCount }}</strong>
+            </td>
+            <td>
+              <span class="text-success">{{ user.onTimeTasksCount }}</span> / {{ user.completedTasksCount }}
+            </td>
+            <td>
+              <span>{{ user.totalHoursLogged }}h</span>
+            </td>
+            <td>
+              <span class="streak-pill">🔥 {{ user.streakDays }}d</span>
+            </td>
+            <td class="text-right">
+              <span class="score-pill">{{ user.totalScore }} pts</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,233 @@
+<div class="projects-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">📁 Projects & Milestones</h1>
+      <p class="page-subtitle">Track high-level project initiatives, deliverables, and milestone roadmaps</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" (click)="openCreateModal()">
+        <span class="btn-icon">+</span> New Project
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading enterprise projects and milestones...</p>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div *ngIf="!isLoading()" class="projects-layout">
+    <!-- Left Column: Project Selector List -->
+    <div class="projects-sidebar">
+      <div class="sidebar-header">
+        <h3>Active Initiatives ({{ projects().length }})</h3>
+      </div>
+      <div class="project-items-list">
+        <div
+          *ngFor="let proj of projects()"
+          class="project-card-item"
+          [class.active]="selectedProject()?.id === proj.id"
+          (click)="selectProject(proj)"
+        >
+          <div class="proj-card-top">
+            <span class="project-badge">{{ proj.projectKey }}</span>
+            <span class="status-pill" [class.completed]="proj.completionRate === 100">
+              {{ proj.projectStatus }}
+            </span>
+          </div>
+          <h4 class="proj-name">{{ proj.name }}</h4>
+          <p class="proj-desc">{{ proj.description || 'No description provided' }}</p>
+          
+          <!-- Progress Bar -->
+          <div class="proj-progress-wrapper">
+            <div class="proj-progress-bar">
+              <div class="proj-progress-fill" [style.width.%]="proj.completionRate"></div>
+            </div>
+            <span class="proj-progress-text">{{ proj.completionRate }}% Done</span>
+          </div>
+
+          <div class="proj-meta">
+            <span>👥 {{ proj.teamName || 'Cross-functional' }}</span>
+            <span>🎯 {{ proj.milestones.length }} Milestones</span>
+          </div>
+        </div>
+
+        <div *ngIf="projects().length === 0" class="empty-list">
+          <p>No projects found.</p>
+          <button class="btn btn-secondary btn-sm" (click)="openCreateModal()">Create your first project</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Project Detail & Milestone Roadmap -->
+    <div *ngIf="selectedProject() as p" class="project-detail-panel">
+      <!-- Project Summary Banner -->
+      <div class="detail-banner">
+        <div class="banner-top">
+          <div class="banner-title-area">
+            <span class="banner-key">{{ p.projectKey }}</span>
+            <h2>{{ p.name }}</h2>
+          </div>
+          <button class="btn btn-secondary btn-sm" (click)="openMilestoneModal()">
+            + Add Milestone Target
+          </button>
+        </div>
+        <p class="banner-desc">{{ p.description || 'Enterprise project container tracking deliverable milestones and task execution.' }}</p>
+
+        <!-- KPI Metrics Grid -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-label">Progress</span>
+            <span class="kpi-value text-accent">{{ p.completionRate }}%</span>
+            <span class="kpi-sub">{{ p.completedTasksCount }} / {{ p.tasksCount }} Tasks Complete</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Team Lead / Manager</span>
+            <span class="kpi-value">{{ p.managerName || 'Prashant (Lead)' }}</span>
+            <span class="kpi-sub">Assigned Team: {{ p.teamName || 'Engineering' }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Timeline Target</span>
+            <span class="kpi-value">{{ p.endDate ? (p.endDate | date:'mediumDate') : 'Continuous' }}</span>
+            <span class="kpi-sub">Started: {{ p.startDate ? (p.startDate | date:'mediumDate') : 'Active' }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Budget Allocated</span>
+            <span class="kpi-value text-success">${{ (p.budget || 50000) | number:'1.0-0' }}</span>
+            <span class="kpi-sub">Resource Allocation</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Milestones Roadmap Section -->
+      <div class="milestones-section">
+        <div class="section-title-bar">
+          <h3>🎯 Roadmap Milestones</h3>
+          <span class="milestone-count-badge">{{ p.milestones.length }} Deliverable Milestones</span>
+        </div>
+
+        <div class="milestones-list">
+          <div *ngFor="let m of p.milestones" class="milestone-card">
+            <div class="milestone-header">
+              <div class="milestone-info">
+                <span class="milestone-status-tag" [class.completed]="m.milestoneStatus === 'Completed'">
+                  {{ m.milestoneStatus || 'In Progress' }}
+                </span>
+                <h4 class="milestone-title">{{ m.title }}</h4>
+              </div>
+              <div class="milestone-due" *ngIf="m.dueDate">
+                📅 Target: <strong>{{ m.dueDate | date:'MMM d, y' }}</strong>
+              </div>
+            </div>
+
+            <p class="milestone-desc">{{ m.description || 'Deliverable milestone tracking completion of related features.' }}</p>
+
+            <div class="milestone-footer">
+              <div class="milestone-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="m.progressPercentage"></div>
+                </div>
+                <span class="progress-label">{{ m.progressPercentage }}% Complete</span>
+              </div>
+              <div class="milestone-task-stat">
+                <span>📋 {{ m.completedTasksCount }} / {{ m.tasksCount }} Tasks Completed</span>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="p.milestones.length === 0" class="empty-milestones">
+            <p>No milestone targets created for this project yet.</p>
+            <button class="btn btn-primary btn-sm" (click)="openMilestoneModal()">+ Add Milestone Target</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Project Modal -->
+  <div *ngIf="showCreateModal()" class="modal-backdrop" (click)="closeCreateModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Create New Enterprise Project</h3>
+        <button class="close-btn" (click)="closeCreateModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Project Key (e.g. CORE, SEC, API)</label>
+            <input type="text" [(ngModel)]="newProject.projectKey" class="form-control" placeholder="WFP" maxlength="10" />
+          </div>
+          <div class="form-group flex-2">
+            <label>Project Name</label>
+            <input type="text" [(ngModel)]="newProject.name" class="form-control" placeholder="WorkFlow Pro Enterprise V2" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea [(ngModel)]="newProject.description" class="form-control" rows="3" placeholder="Project goals, deliverable scope, and objectives..."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Associated Team</label>
+            <select [(ngModel)]="newProject.teamId" class="form-control">
+              <option [ngValue]="undefined">Cross-functional / All Teams</option>
+              <option *ngFor="let t of teams()" [value]="t.id">{{ t.name }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Budget ($)</label>
+            <input type="number" [(ngModel)]="newProject.budget" class="form-control" placeholder="75000" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Date</label>
+            <input type="date" [(ngModel)]="newProject.startDate" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>End Date Target</label>
+            <input type="date" [(ngModel)]="newProject.endDate" class="form-control" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeCreateModal()">Cancel</button>
+        <button class="btn btn-primary" (click)="createProject()">Create Project</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Milestone Modal -->
+  <div *ngIf="showMilestoneModal()" class="modal-backdrop" (click)="closeMilestoneModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Add Milestone Deliverable</h3>
+        <button class="close-btn" (click)="closeMilestoneModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Milestone Title</label>
+          <input type="text" [(ngModel)]="newMilestone.title" class="form-control" placeholder="Phase 1: Architecture & API Foundation" />
+        </div>
+        <div class="form-group">
+          <label>Target Due Date</label>
+          <input type="date" [(ngModel)]="newMilestone.dueDate" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label>Description / Deliverables</label>
+          <textarea [(ngModel)]="newMilestone.description" class="form-control" rows="3" placeholder="Key deliverables expected in this milestone..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeMilestoneModal()">Cancel</button>
+        <button class="btn btn-primary" (click)="createMilestone()">Add Milestone</button>
+      </div>
+    </div>
+  </div>
+</div>

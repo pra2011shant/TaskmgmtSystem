@@ -5,12 +5,13 @@ import { SubTask, TaskAttachment, TaskComment, TaskItem } from '../../core/model
 import { TaskService } from '../../core/services/task.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
-import { StatusBadgeComponent } from '../../components/ui/status-badge.component';
+import { TimeTrackingService } from '../../core/services/time-tracking.service';
+import { TimeLog } from '../../core/models/time-tracking.model';
 
 @Component({
   selector: 'app-task-detail-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, StatusBadgeComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './task-detail-modal.component.html',
   styleUrl: './task-detail-modal.component.css'
 })
@@ -23,9 +24,10 @@ export class TaskDetailModalComponent implements OnInit {
 
   taskService = inject(TaskService);
   authService = inject(AuthService);
+  timeService = inject(TimeTrackingService);
   toast = inject(ToastService);
 
-  activeTab = signal<'overview' | 'subtasks' | 'attachments' | 'comments'>('overview');
+  activeTab = signal<'overview' | 'subtasks' | 'attachments' | 'comments' | 'timelogs'>('overview');
 
   comments = signal<TaskComment[]>([]);
   newComment = '';
@@ -39,10 +41,68 @@ export class TaskDetailModalComponent implements OnInit {
   attachments = signal<TaskAttachment[]>([]);
   isUploading = signal(false);
 
+  // Time Logs
+  timeLogs = signal<TimeLog[]>([]);
+  manualMinutes: number = 30;
+  manualDesc: string = '';
+  isTimerRunning = signal<boolean>(false);
+
   ngOnInit() {
     this.loadComments();
     this.loadSubtasks();
     this.loadAttachments();
+    this.loadTimeLogs();
+  }
+
+  loadTimeLogs() {
+    this.timeService.getTaskLogs(this.task.id).subscribe({
+      next: (logs) => {
+        this.timeLogs.set(logs);
+        const myActive = logs.some(l => l.isRunning && l.userId === this.authService.currentUser()?.id);
+        this.isTimerRunning.set(myActive);
+      },
+      error: () => {}
+    });
+  }
+
+  startStopwatch() {
+    this.timeService.startTimer({ taskId: this.task.id, description: 'Working on task' }).subscribe({
+      next: () => {
+        this.isTimerRunning.set(true);
+        this.loadTimeLogs();
+        this.toast.success('Live stopwatch started!');
+      },
+      error: () => this.toast.error('Failed to start stopwatch')
+    });
+  }
+
+  stopStopwatch() {
+    this.timeService.stopTimer(this.task.id).subscribe({
+      next: () => {
+        this.isTimerRunning.set(false);
+        this.loadTimeLogs();
+        this.taskUpdated.emit();
+        this.toast.success('Stopwatch stopped & logged.');
+      },
+      error: () => this.toast.error('Failed to stop stopwatch')
+    });
+  }
+
+  logManualTime() {
+    if (this.manualMinutes <= 0) return;
+    this.timeService.logManualTime({
+      taskId: this.task.id,
+      durationMinutes: this.manualMinutes,
+      description: this.manualDesc
+    }).subscribe({
+      next: () => {
+        this.manualDesc = '';
+        this.loadTimeLogs();
+        this.taskUpdated.emit();
+        this.toast.success('Work duration logged.');
+      },
+      error: () => this.toast.error('Failed to log time')
+    });
   }
 
   loadComments() {

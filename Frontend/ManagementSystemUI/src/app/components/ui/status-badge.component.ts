@@ -15,6 +15,16 @@ export class StatusBadgeComponent {
   @Input() size: 'sm' | 'md' | 'lg' = 'md';
   @Input() showIcon = true;
 
+  @Input() set status(val: any) {
+    this.type = 'status';
+    this.value = val;
+  }
+
+  @Input() set priority(val: any) {
+    this.type = 'priority';
+    this.value = val;
+  }
+
   get sizeClass(): string {
     return this.size === 'sm' ? 'badge-sm' : this.size === 'lg' ? 'badge-lg' : '';
   }

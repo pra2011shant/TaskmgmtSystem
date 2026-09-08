@@ -41,6 +41,9 @@ namespace ManagementSystem.Models
         public bool IsLockedOut => LockoutEnd.HasValue && LockoutEnd.Value > DateTime.UtcNow;
 
         [NotMapped]
+        public bool IsActive => !IsDeleted && Status == 1;
+
+        [NotMapped]
         public DateTime CreatedAt
         {
             get => CreatedDate;
@@ -54,5 +57,6 @@ namespace ManagementSystem.Models
         public ICollection<TaskComment> Comments { get; set; } = new List<TaskComment>();
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
         public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+        public ICollection<TaskTimeLog> TimeLogs { get; set; } = new List<TaskTimeLog>();
     }
 }

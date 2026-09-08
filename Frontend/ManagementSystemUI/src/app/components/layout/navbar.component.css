@@ -535,3 +535,75 @@
     display: none;
   }
 }
+
+/* Stopwatch Active Pill */
+.active-stopwatch-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  color: #ef4444;
+  font-weight: 700;
+  font-size: 0.85rem;
+  animation: borderPulse 2s infinite;
+}
+
+.stopwatch-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: pulse 1.5s infinite;
+}
+
+.timer-display {
+  font-family: monospace;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+}
+
+.timer-task {
+  background: rgba(239, 68, 68, 0.2);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.stop-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease;
+}
+
+.stop-btn:hover {
+  transform: scale(1.2);
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+  background: rgba(99, 102, 241, 0.2);
+  transform: rotate(15deg);
+}
+

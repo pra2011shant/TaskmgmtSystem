@@ -8,6 +8,8 @@ import { TaskScheduleComponent } from './pages/schedule/task-schedule.component'
 import { CalendarViewComponent } from './pages/calendar/calendar-view.component';
 import { TeamListComponent } from './pages/teams/team-list.component';
 import { ReportsComponent } from './pages/reports/reports.component';
+import { ProjectsComponent } from './pages/projects/projects.component';
+import { LeaderboardComponent } from './pages/leaderboard/leaderboard.component';
 import { NotificationsPageComponent } from './pages/notifications/notifications-page.component';
 import { UserListComponent } from './pages/users/user-list.component';
 import { AdminPanelComponent } from './pages/admin/admin-panel.component';
@@ -26,9 +28,11 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: DashboardComponent },
+      { path: 'projects', component: ProjectsComponent },
       { path: 'tasks', component: TaskListComponent },
       { path: 'calendar', component: CalendarViewComponent },
       { path: 'schedule', component: TaskScheduleComponent },
+      { path: 'leaderboard', component: LeaderboardComponent },
       { path: 'teams', component: TeamListComponent },
       { path: 'reports', component: ReportsComponent },
       { path: 'notifications', component: NotificationsPageComponent },

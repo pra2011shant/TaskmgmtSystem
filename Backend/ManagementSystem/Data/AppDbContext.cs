@@ -19,11 +19,17 @@ namespace ManagementSystem.Data
         public DbSet<User> Users => Set<User>();
         public DbSet<Team> Teams => Set<Team>();
         public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
+        public DbSet<Project> Projects => Set<Project>();
+        public DbSet<Milestone> Milestones => Set<Milestone>();
         public DbSet<TaskItem> Tasks => Set<TaskItem>();
         public DbSet<TaskComment> Comments => Set<TaskComment>();
         public DbSet<Notification> Notifications => Set<Notification>();
         public DbSet<SubTask> SubTasks => Set<SubTask>();
         public DbSet<TaskAttachment> TaskAttachments => Set<TaskAttachment>();
+        public DbSet<TaskDependency> TaskDependencies => Set<TaskDependency>();
+        public DbSet<TaskWatcher> TaskWatchers => Set<TaskWatcher>();
+        public DbSet<TaskTimeLog> TaskTimeLogs => Set<TaskTimeLog>();
+        public DbSet<TaskTemplate> TaskTemplates => Set<TaskTemplate>();
         public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
         public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
@@ -74,7 +80,43 @@ namespace ManagementSystem.Data
             modelBuilder.Entity<TeamMember>()
                 .HasQueryFilter(tm => !tm.IsDeleted);
 
-            // 4. TaskItem Entity
+            // 4. Project Entity
+            modelBuilder.Entity<Project>()
+                .HasIndex(p => p.ProjectKey)
+                .IsUnique();
+
+            modelBuilder.Entity<Project>()
+                .HasOne(p => p.Manager)
+                .WithMany()
+                .HasForeignKey(p => p.ManagerId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Project>()
+                .HasQueryFilter(p => !p.IsDeleted);
+
+            // 5. Milestone Entity
+            modelBuilder.Entity<Milestone>()
+                .HasOne(m => m.Project)
+                .WithMany(p => p.Milestones)
+                .HasForeignKey(m => m.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Milestone>()
+                .HasQueryFilter(m => !m.IsDeleted);
+
+            // 6. TaskItem Entity
+            modelBuilder.Entity<TaskItem>()
+                .HasOne(t => t.Project)
+                .WithMany(p => p.Tasks)
+                .HasForeignKey(t => t.ProjectId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<TaskItem>()
+                .HasOne(t => t.Milestone)
+                .WithMany(m => m.Tasks)
+                .HasForeignKey(t => t.MilestoneId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             modelBuilder.Entity<TaskItem>()
                 .HasOne(t => t.Team)
                 .WithMany(tm => tm.Tasks)
@@ -96,7 +138,7 @@ namespace ManagementSystem.Data
             modelBuilder.Entity<TaskItem>()
                 .HasQueryFilter(t => !t.IsDeleted);
 
-            // 5. SubTask Entity
+            // 7. SubTask Entity
             modelBuilder.Entity<SubTask>()
                 .HasOne(st => st.Task)
                 .WithMany(t => t.SubTasks)
@@ -106,7 +148,7 @@ namespace ManagementSystem.Data
             modelBuilder.Entity<SubTask>()
                 .HasQueryFilter(st => !st.IsDeleted);
 
-            // 6. TaskAttachment Entity
+            // 8. TaskAttachment Entity
             modelBuilder.Entity<TaskAttachment>()
                 .HasOne(ta => ta.Task)
                 .WithMany(t => t.Attachments)
@@ -122,7 +164,50 @@ namespace ManagementSystem.Data
             modelBuilder.Entity<TaskAttachment>()
                 .HasQueryFilter(ta => !ta.IsDeleted);
 
-            // 7. TaskComment Entity
+            // 9. TaskDependency Entity
+            modelBuilder.Entity<TaskDependency>()
+                .HasOne(td => td.Task)
+                .WithMany(t => t.Dependencies)
+                .HasForeignKey(td => td.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TaskDependency>()
+                .HasOne(td => td.DependsOnTask)
+                .WithMany()
+                .HasForeignKey(td => td.DependsOnTaskId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 10. TaskWatcher Entity
+            modelBuilder.Entity<TaskWatcher>()
+                .HasIndex(tw => new { tw.TaskId, tw.UserId })
+                .IsUnique();
+
+            modelBuilder.Entity<TaskWatcher>()
+                .HasOne(tw => tw.Task)
+                .WithMany(t => t.Watchers)
+                .HasForeignKey(tw => tw.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TaskWatcher>()
+                .HasOne(tw => tw.User)
+                .WithMany()
+                .HasForeignKey(tw => tw.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 11. TaskTimeLog Entity
+            modelBuilder.Entity<TaskTimeLog>()
+                .HasOne(tl => tl.Task)
+                .WithMany(t => t.TimeLogs)
+                .HasForeignKey(tl => tl.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TaskTimeLog>()
+                .HasOne(tl => tl.User)
+                .WithMany()
+                .HasForeignKey(tl => tl.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 12. TaskComment Entity
             modelBuilder.Entity<TaskComment>()
                 .HasOne(c => c.Task)
                 .WithMany(t => t.Comments)
@@ -144,7 +229,7 @@ namespace ManagementSystem.Data
             modelBuilder.Entity<TaskComment>()
                 .HasQueryFilter(c => !c.IsDeleted);
 
-            // 8. Notification Entity
+            // 13. Notification Entity
             modelBuilder.Entity<Notification>()
                 .HasOne(n => n.User)
                 .WithMany(u => u.Notifications)
@@ -154,14 +239,14 @@ namespace ManagementSystem.Data
             modelBuilder.Entity<Notification>()
                 .HasQueryFilter(n => !n.IsDeleted);
 
-            // 9. RefreshToken Entity
+            // 14. RefreshToken Entity
             modelBuilder.Entity<RefreshToken>()
                 .HasOne(rt => rt.User)
                 .WithMany(u => u.RefreshTokens)
                 .HasForeignKey(rt => rt.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // 10. AuditLog Indexes
+            // 15. AuditLog Indexes
             modelBuilder.Entity<AuditLog>()
                 .HasIndex(a => new { a.EntityName, a.EntityId });
 
