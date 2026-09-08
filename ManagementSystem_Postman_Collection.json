@@ -408,6 +408,174 @@
           }
         }
       ]
+    },
+    {
+      "name": "7. Projects & Milestones",
+      "item": [
+        {
+          "name": "Get All Projects",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          }
+        },
+        {
+          "name": "Create Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectKey\": \"CORE\",\n  \"name\": \"Enterprise Core System\",\n  \"description\": \"Core architecture deliverables\",\n  \"budget\": 75000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          }
+        },
+        {
+          "name": "Add Milestone Target",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Phase 1: API Hardening\",\n  \"description\": \"Security & RBAC endpoints\",\n  \"dueDate\": \"2026-10-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/1/milestones",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "1", "milestones"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Time Tracking & Stopwatch",
+      "item": [
+        {
+          "name": "Get Active Timer",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/timetracking/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["timetracking", "active"]
+            }
+          }
+        },
+        {
+          "name": "Start Stopwatch",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"taskId\": 1,\n  \"description\": \"Working on task execution\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/timetracking/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["timetracking", "start"]
+            }
+          }
+        },
+        {
+          "name": "Stop Stopwatch",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/timetracking/stop/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["timetracking", "stop", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Productivity Leaderboard",
+      "item": [
+        {
+          "name": "Get Ranked Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/leaderboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["leaderboard"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Bulk Operations",
+      "item": [
+        {
+          "name": "Bulk Update Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"taskIds\": [1, 2],\n  \"newStatus\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/bulktasks/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["bulktasks", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. DevOps & Health",
+      "item": [
+        {
+          "name": "System Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/health",
+              "host": ["http://localhost:5000"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
     }
   ]
 }

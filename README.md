@@ -15,10 +15,40 @@ A high-performance, enterprise-grade full-stack **Task & Team Management System*
 ```mermaid
 graph TD
     Client[Angular 19 Standalone UI & Signals] -->|HTTPS / REST API / JWT + Refresh Token| Gateway[ASP.NET Core 8 Web API]
+    Client -->|WebSockets / SignalR| Hub[TaskHub /hubs/tasks]
     Gateway -->|Rate Limiter & Global Exception Handler| ControllerLayer[Controllers & PBAC Authorization]
-    ControllerLayer -->|Domain Business Logic| ServiceLayer[Services: Tasks, Audit, Auth, Reports, Attachments]
+    ControllerLayer -->|Domain Business Logic| ServiceLayer[Services: Projects, Tasks, Time, Audit, Auth, Reports]
     ServiceLayer -->|High-Performance Indexed Queries / SPs| DbContext[EF Core 8 / AppDbContext]
     DbContext -->|Atomic Mutations & Soft-Delete Filters| Database[(SQL Server 2022 / LocalDB)]
+```
+
+---
+
+## 🗄️ Database Entity Relationship (ER) Diagram
+
+```mermaid
+erDiagram
+    Organizations ||--o{ Users : "employs"
+    Organizations ||--o{ Teams : "contains"
+    Users ||--o{ TeamMembers : "belongs_to"
+    Teams ||--o{ TeamMembers : "has_members"
+    Teams ||--o{ Projects : "manages"
+    Users ||--o{ Projects : "leads"
+    Projects ||--o{ Milestones : "contains_phases"
+    Projects ||--o{ Tasks : "contains_deliverables"
+    Milestones ||--o{ Tasks : "groups_tasks"
+    Users ||--o{ Tasks : "assigned_to"
+    Teams ||--o{ Tasks : "executed_by"
+    Tasks ||--o{ SubTasks : "broken_down_into"
+    Tasks ||--o{ TaskDependencies : "blocked_by"
+    Tasks ||--o{ TaskWatchers : "followed_by"
+    Tasks ||--o{ TaskTimeLogs : "tracked_time"
+    Tasks ||--o{ Comments : "discussion_thread"
+    Tasks ||--o{ TaskAttachments : "files"
+    Users ||--o{ Notifications : "receives"
+    Users ||--o{ AuditLogs : "triggers_mutation"
+    Users ||--o{ RefreshTokens : "auth_session"
+    Users ||--o{ RolePermissions : "governed_by"
 ```
 
 ---

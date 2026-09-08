@@ -231,5 +231,13 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<ManagementSystem.Hubs.TaskHub>("/hubs/tasks");
+app.MapGet("/health", () => Results.Ok(new 
+{ 
+    status = "Healthy", 
+    service = "WorkFlow Pro Enterprise API",
+    version = "2.0.0", 
+    timestamp = DateTime.UtcNow,
+    uptime = Environment.TickCount64 
+}));
 
 app.Run();
