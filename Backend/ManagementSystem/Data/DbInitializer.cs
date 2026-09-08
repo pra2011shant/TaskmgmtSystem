@@ -173,10 +173,75 @@ namespace ManagementSystem.Data
                 await context.SaveChangesAsync();
 
                 // =====================================================================
+                // 3.5 SEED SAMPLE PROJECTS & MILESTONES
+                // =====================================================================
+                var project1 = new Project
+                {
+                    ProjectKey = "WFP",
+                    Name = "WorkFlow Pro Enterprise Core",
+                    Description = "Next-generation enterprise task management and collaboration platform.",
+                    TeamId = engineeringTeam.Id,
+                    ManagerId = manager.Id,
+                    Budget = 85000,
+                    StartDate = DateTime.UtcNow.AddMonths(-1),
+                    EndDate = DateTime.UtcNow.AddMonths(2),
+                    ProjectStatus = 1,
+                    CreatedById = admin.Id,
+                    CreatedDate = DateTime.UtcNow.AddMonths(-1)
+                };
+
+                var project2 = new Project
+                {
+                    ProjectKey = "SEC",
+                    Name = "Security & Compliance Hardening",
+                    Description = "SOC2 audit preparation, penetration testing, and PBAC granular permissions.",
+                    TeamId = engineeringTeam.Id,
+                    ManagerId = manager.Id,
+                    Budget = 45000,
+                    StartDate = DateTime.UtcNow.AddDays(-15),
+                    EndDate = DateTime.UtcNow.AddMonths(1),
+                    ProjectStatus = 1,
+                    CreatedById = admin.Id,
+                    CreatedDate = DateTime.UtcNow.AddDays(-15)
+                };
+
+                context.Projects.AddRange(project1, project2);
+                await context.SaveChangesAsync();
+
+                var milestone1 = new Milestone
+                {
+                    ProjectId = project1.Id,
+                    Title = "Phase 1: API Foundation & Architecture",
+                    Description = "Core database schema, JWT auth, and repository services.",
+                    DueDate = DateTime.UtcNow.AddDays(15),
+                    ProgressPercentage = 75,
+                    MilestoneStatus = 2,
+                    CreatedById = manager.Id,
+                    CreatedDate = DateTime.UtcNow.AddDays(-10)
+                };
+
+                var milestone2 = new Milestone
+                {
+                    ProjectId = project1.Id,
+                    Title = "Phase 2: Real-Time WebSockets & UI",
+                    Description = "SignalR hub, live stopwatch, and Angular 19 signals UI.",
+                    DueDate = DateTime.UtcNow.AddMonths(1),
+                    ProgressPercentage = 40,
+                    MilestoneStatus = 2,
+                    CreatedById = manager.Id,
+                    CreatedDate = DateTime.UtcNow.AddDays(-5)
+                };
+
+                context.Milestones.AddRange(milestone1, milestone2);
+                await context.SaveChangesAsync();
+
+                // =====================================================================
                 // 4. SEED SAMPLE TASKS & SUBTASKS
                 // =====================================================================
                 var task1 = new TaskItem
                 {
+                    ProjectId = project1.Id,
+                    MilestoneId = milestone1.Id,
                     Title = "Implement JWT & Refresh Token Authentication",
                     Description = "Configure ASP.NET Core JWT bearer authentication with silent refresh token rotation and BCrypt hashing.",
                     Status = TaskStatusEnum.InProgress,
@@ -194,6 +259,8 @@ namespace ManagementSystem.Data
 
                 var task2 = new TaskItem
                 {
+                    ProjectId = project1.Id,
+                    MilestoneId = milestone2.Id,
                     Title = "Design Interactive Kanban Board UI",
                     Description = "Create modern drag-and-drop Kanban workflow columns with rich card badges, avatars, and animations.",
                     Status = TaskStatusEnum.Review,
@@ -211,6 +278,7 @@ namespace ManagementSystem.Data
 
                 var task3 = new TaskItem
                 {
+                    ProjectId = project2.Id,
                     Title = "Setup Automated CI/CD Pipeline with GitHub Actions",
                     Description = "Configure continuous integration to compile .NET API, build Angular artifacts, and execute unit test suite.",
                     Status = TaskStatusEnum.ToDo,
@@ -228,6 +296,20 @@ namespace ManagementSystem.Data
 
                 context.Tasks.AddRange(task1, task2, task3);
                 await context.SaveChangesAsync();
+
+                // Seed sample TimeLog
+                context.TaskTimeLogs.AddRange(
+                    new TaskTimeLog
+                    {
+                        TaskId = task1.Id,
+                        UserId = user1.Id,
+                        StartTime = DateTime.UtcNow.AddHours(-3),
+                        EndTime = DateTime.UtcNow.AddHours(-1),
+                        DurationMinutes = 120,
+                        Description = "JWT configuration & Token Validation middleware setup",
+                        CreatedDate = DateTime.UtcNow
+                    }
+                );
 
                 // Subtasks for Task 1
                 context.SubTasks.AddRange(

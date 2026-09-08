@@ -3,6 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ManagementSystem.Models
 {
+    /// <summary>
+    /// Database Table: [Notifications]
+    /// Purpose: System and task lifecycle notifications sent to individual users.
+    /// </summary>
+    [Table("Notifications")]
     public class Notification : BaseEntity
     {
         [Key]

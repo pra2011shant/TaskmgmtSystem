@@ -3,6 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ManagementSystem.Models
 {
+    /// <summary>
+    /// Database Table: [Comments]
+    /// Purpose: Threaded discussions, team replies, and collaboration messages on tasks.
+    /// </summary>
+    [Table("Comments")]
     public class TaskComment : BaseEntity
     {
         [Key]

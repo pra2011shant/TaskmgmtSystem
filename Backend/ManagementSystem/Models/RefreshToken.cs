@@ -3,6 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ManagementSystem.Models
 {
+    /// <summary>
+    /// Database Table: [RefreshTokens]
+    /// Purpose: Cryptographic refresh tokens for secure JWT session sliding rotation.
+    /// </summary>
+    [Table("RefreshTokens")]
     public class RefreshToken : BaseEntity
     {
         [Key]

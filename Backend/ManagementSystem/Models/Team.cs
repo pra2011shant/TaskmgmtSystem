@@ -3,6 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ManagementSystem.Models
 {
+    /// <summary>
+    /// Database Table: [Teams]
+    /// Purpose: Functional business units, engineering squads, and project departments.
+    /// </summary>
+    [Table("Teams")]
     public class Team : BaseEntity
     {
         [Key]

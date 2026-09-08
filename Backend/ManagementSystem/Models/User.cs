@@ -10,6 +10,11 @@ namespace ManagementSystem.Models
         User = 3
     }
 
+    /// <summary>
+    /// Database Table: [Users]
+    /// Purpose: Core user identity record storing credentials, authentication lockouts, roles, and memberships.
+    /// </summary>
+    [Table("Users")]
     public class User : BaseEntity
     {
         [Key]

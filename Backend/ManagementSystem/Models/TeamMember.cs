@@ -3,6 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ManagementSystem.Models
 {
+    /// <summary>
+    /// Database Table: [TeamMembers]
+    /// Purpose: Many-to-many relationship mapping employees into squads and teams.
+    /// </summary>
+    [Table("TeamMembers")]
     public class TeamMember : BaseEntity
     {
         [Key]

@@ -3,6 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ManagementSystem.Models
 {
+    /// <summary>
+    /// Database Table: [TaskAttachments]
+    /// Purpose: Uploaded files and media assets associated with tasks.
+    /// </summary>
+    [Table("TaskAttachments")]
     public class TaskAttachment : BaseEntity
     {
         [Key]

@@ -3,6 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ManagementSystem.Models
 {
+    /// <summary>
+    /// Database Table: [SubTasks]
+    /// Purpose: Granular checklist items belonging to parent tasks.
+    /// </summary>
+    [Table("SubTasks")]
     public class SubTask : BaseEntity
     {
         [Key]

@@ -1,7 +1,13 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ManagementSystem.Models
 {
+    /// <summary>
+    /// Database Table: [AuditLogs]
+    /// Purpose: Immutable security and compliance ledger recording entity mutations and user actions.
+    /// </summary>
+    [Table("AuditLogs")]
     public class AuditLog
     {
         [Key]
