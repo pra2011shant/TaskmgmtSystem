@@ -91,4 +91,32 @@ namespace ManagementSystem.DTOs
         public DateTime? LastUpdatedDate { get; set; }
         public int? CreatedById { get; set; }
     }
+
+    /// <summary>
+    /// Request payload to initiate password recovery.
+    /// </summary>
+    public class ForgotPasswordRequestDto
+    {
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Invalid email format.")]
+        public string Email { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Request payload to finalize password reset with verification code.
+    /// </summary>
+    public class ResetPasswordRequestDto
+    {
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Invalid email format.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Reset verification code or OTP is required.")]
+        public string ResetCode { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "New password is required.")]
+        [MinLength(6, ErrorMessage = "Password must be at least 6 characters long.")]
+        [RegularExpression(@"^(?=.*[^a-zA-Z0-9]).{6,}$", ErrorMessage = "Password must be at least 6 characters long and contain at least one special character (e.g. @, #, $, %, !).")]
+        public string NewPassword { get; set; } = string.Empty;
+    }
 }

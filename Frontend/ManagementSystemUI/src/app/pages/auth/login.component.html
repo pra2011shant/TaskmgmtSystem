@@ -43,7 +43,10 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Password</label>
+        <div class="password-label-row">
+          <label class="form-label">Password</label>
+          <a href="javascript:void(0)" class="forgot-password-link" (click)="openForgotModal()">Forgot password?</a>
+        </div>
         <div class="input-with-icon">
           <i class="fa-solid fa-lock"></i>
           <input 
@@ -70,6 +73,79 @@
       <p class="admin-notice-text">
         <i class="fa-solid fa-user-shield"></i> User accounts are provisioned by System Administrators.
       </p>
+    </div>
+  </div>
+
+  <!-- Forgot / Reset Password Modal -->
+  <div class="modal-backdrop-custom" *ngIf="showForgotModal()">
+    <div class="modal-dialog-custom modal-recovery">
+      <div class="modal-header-custom">
+        <div class="modal-title-wrap">
+          <i class="fa-solid fa-key text-primary"></i>
+          <h3>Reset Password</h3>
+        </div>
+        <button type="button" class="btn-icon" (click)="closeForgotModal()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body-custom">
+        <!-- Step 1: Request Code -->
+        <div *ngIf="forgotStep() === 1" class="recovery-step">
+          <p class="recovery-info">
+            Enter your registered account email address. We will verify your identity and generate a password recovery code.
+          </p>
+          <div class="form-group">
+            <label class="form-label">Registered Email</label>
+            <div class="input-with-icon">
+              <i class="fa-regular fa-envelope"></i>
+              <input 
+                type="email" 
+                class="form-control" 
+                [(ngModel)]="forgotEmail" 
+                placeholder="you@company.com" 
+              />
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary w-100 mt-3" [disabled]="forgotLoading()" (click)="onRequestResetCode()">
+            <span *ngIf="!forgotLoading()"><i class="fa-solid fa-paper-plane"></i> Send Recovery Code</span>
+            <span *ngIf="forgotLoading()"><i class="fa-solid fa-spinner fa-spin"></i> Generating Code...</span>
+          </button>
+        </div>
+
+        <!-- Step 2: Reset Password -->
+        <div *ngIf="forgotStep() === 2" class="recovery-step">
+          <div class="recovery-code-banner" *ngIf="forgotCode">
+            <i class="fa-solid fa-circle-check text-success"></i>
+            <span>Verification Code: <strong>{{ forgotCode }}</strong></span>
+          </div>
+
+          <div class="form-group mb-2">
+            <label class="form-label">Recovery Code</label>
+            <input type="text" class="form-control text-center tracking-widest font-mono" [(ngModel)]="forgotCode" placeholder="Enter 6-digit code" />
+          </div>
+
+          <div class="form-group mb-2">
+            <label class="form-label">New Password</label>
+            <input type="password" class="form-control" [(ngModel)]="newPassword" placeholder="Minimum 6 chars with special char" />
+          </div>
+
+          <div class="form-group mb-3">
+            <label class="form-label">Confirm New Password</label>
+            <input type="password" class="form-control" [(ngModel)]="confirmPassword" placeholder="Confirm new password" />
+          </div>
+
+          <div class="modal-actions-row">
+            <button type="button" class="btn btn-secondary" (click)="forgotStep.set(1)">
+              <i class="fa-solid fa-arrow-left"></i> Back
+            </button>
+            <button type="button" class="btn btn-primary" [disabled]="forgotLoading()" (click)="onResetPassword()">
+              <span *ngIf="!forgotLoading()"><i class="fa-solid fa-check"></i> Set New Password</span>
+              <span *ngIf="forgotLoading()"><i class="fa-solid fa-spinner fa-spin"></i> Resetting...</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

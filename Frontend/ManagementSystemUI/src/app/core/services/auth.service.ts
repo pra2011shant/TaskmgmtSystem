@@ -104,6 +104,14 @@ export class AuthService {
     return this.http.get<User[]>(`${this.apiUrl}/users`);
   }
 
+  forgotPassword(email: string): Observable<{ success: boolean; message: string; resetCode?: string }> {
+    return this.http.post<{ success: boolean; message: string; resetCode?: string }>(`${this.apiUrl}/forgot-password`, { email });
+  }
+
+  resetPassword(payload: { email: string; resetCode: string; newPassword: string }): Observable<{ success: boolean; message: string }> {
+    return this.http.post<{ success: boolean; message: string }>(`${this.apiUrl}/reset-password`, payload);
+  }
+
   private handleAuthSuccess(res: AuthResponse): void {
     if (res.token) {
       this.token.set(res.token);

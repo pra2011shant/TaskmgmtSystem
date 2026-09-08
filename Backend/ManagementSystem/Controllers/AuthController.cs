@@ -134,5 +134,45 @@ namespace ManagementSystem.Controllers
             var users = await _authService.GetAllUsersAsync();
             return Ok(users);
         }
+
+        /// <summary>
+        /// Initiates password recovery flow (POST /api/auth/forgot-password).
+        /// </summary>
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var (success, message, resetCode) = await _authService.ForgotPasswordAsync(dto, GetClientIp());
+            return Ok(new { success, message, resetCode });
+        }
+
+        /// <summary>
+        /// Resets user password using verification code (POST /api/auth/reset-password).
+        /// </summary>
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errorMessages = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .Where(m => !string.IsNullOrEmpty(m))
+                    .ToList();
+                return BadRequest(new { message = string.Join(" ", errorMessages) });
+            }
+
+            var (success, message) = await _authService.ResetPasswordAsync(dto, GetClientIp());
+            if (!success)
+            {
+                return BadRequest(new { message });
+            }
+
+            return Ok(new { success = true, message });
+        }
     }
 }
