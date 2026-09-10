@@ -196,6 +196,7 @@ namespace ManagementSystem.Data
                 .HasOne(tw => tw.User)
                 .WithMany()
                 .HasForeignKey(tw => tw.UserId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // 11. TaskTimeLog Entity
@@ -210,6 +211,7 @@ namespace ManagementSystem.Data
                 .HasOne(tl => tl.User)
                 .WithMany(u => u.TimeLogs)
                 .HasForeignKey(tl => tl.UserId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // 12. TaskComment Entity
@@ -278,6 +280,7 @@ namespace ManagementSystem.Data
                 .HasOne(tv => tv.User)
                 .WithMany()
                 .HasForeignKey(tv => tv.UserId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<TaskView>()
