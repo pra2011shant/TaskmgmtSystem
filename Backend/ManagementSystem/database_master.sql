@@ -378,6 +378,7 @@ BEGIN
         Role INT NOT NULL,
         Permission NVARCHAR(100) NOT NULL,
         IsGranted BIT NOT NULL DEFAULT 1,
+        Remarks NVARCHAR(500) NULL,
         Status INT NOT NULL DEFAULT 1,
         IsDeleted BIT NOT NULL DEFAULT 0,
         CreatedDate DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
@@ -650,11 +651,11 @@ IF NOT EXISTS (SELECT 1 FROM Users)
 BEGIN
     INSERT INTO Users (FullName, Email, PasswordHash, Role, Department)
     VALUES 
-    ('System Administrator', 'admin@system.com', '$2a$11$N8X1Gg0gW5Yd7Sj0jR6r9.3F7aL8vYjT3H5K8Q2W9E1R4T7Y0U3I6', 1, 'Executive IT'),
-    ('Alex Morgan', 'manager@system.com', '$2a$11$N8X1Gg0gW5Yd7Sj0jR6r9.3F7aL8vYjT3H5K8Q2W9E1R4T7Y0U3I6', 2, 'Engineering'),
-    ('Rahul Sharma', 'rahul@system.com', '$2a$11$N8X1Gg0gW5Yd7Sj0jR6r9.3F7aL8vYjT3H5K8Q2W9E1R4T7Y0U3I6', 3, 'Backend Dev'),
-    ('Priya Patel', 'priya@system.com', '$2a$11$N8X1Gg0gW5Yd7Sj0jR6r9.3F7aL8vYjT3H5K8Q2W9E1R4T7Y0U3I6', 3, 'UI/UX Design'),
-    ('John Doe', 'user@system.com', '$2a$11$N8X1Gg0gW5Yd7Sj0jR6r9.3F7aL8vYjT3H5K8Q2W9E1R4T7Y0U3I6', 3, 'QA Automation');
+    ('System Administrator', 'admin@system.com', '$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 1, 'Executive IT'),
+    ('Alex Morgan', 'manager@system.com', '$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 2, 'Engineering'),
+    ('Rahul Sharma', 'rahul@system.com', '$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 3, 'Backend Dev'),
+    ('Priya Patel', 'priya@system.com', '$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 3, 'UI/UX Design'),
+    ('John Doe', 'user@system.com', '$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 3, 'QA Automation');
 END
 GO
 
