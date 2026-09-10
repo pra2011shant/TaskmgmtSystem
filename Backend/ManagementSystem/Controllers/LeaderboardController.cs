@@ -44,8 +44,8 @@ namespace ManagementSystem.Controllers
         public async Task<IActionResult> GetLeaderboard()
         {
             var users = await _context.Users
-                .Where(u => u.IsActive)
-                .Include(u => u.AssignedTasks.Where(t => !t.IsDeleted))
+                .Where(u => !u.IsDeleted && u.Status == 1)
+                .Include(u => u.AssignedTasks)
                 .Include(u => u.TimeLogs)
                 .AsNoTracking()
                 .ToListAsync();
