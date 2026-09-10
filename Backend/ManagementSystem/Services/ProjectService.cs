@@ -26,15 +26,24 @@ namespace ManagementSystem.Services
 
         public async Task<List<ProjectDto>> GetProjectsAsync()
         {
-            var projects = await _context.Projects
-                .Include(p => p.Team)
-                .Include(p => p.Manager)
-                .Include(p => p.Milestones)
-                .Include(p => p.Tasks)
-                .AsNoTracking()
-                .ToListAsync();
+            try
+            {
+                var projects = await _context.Projects
+                    .Include(p => p.Team)
+                    .Include(p => p.Manager)
+                    .Include(p => p.Milestones)
+                        .ThenInclude(m => m.Tasks)
+                    .Include(p => p.Tasks)
+                    .AsNoTracking()
+                    .ToListAsync();
 
-            return projects.Select(MapToDto).ToList();
+                return projects.Select(MapToDto).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in GetProjectsAsync");
+                throw;
+            }
         }
 
         public async Task<ProjectDto?> GetProjectByIdAsync(int id)

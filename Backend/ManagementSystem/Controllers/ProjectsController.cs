@@ -29,8 +29,15 @@ namespace ManagementSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> GetProjects()
         {
-            var projects = await _projectService.GetProjectsAsync();
-            return Ok(projects);
+            try
+            {
+                var projects = await _projectService.GetProjectsAsync();
+                return Ok(projects);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Failed to load projects", details = ex.Message });
+            }
         }
 
         /// <summary>
