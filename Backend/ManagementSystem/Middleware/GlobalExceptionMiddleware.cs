@@ -47,10 +47,8 @@ namespace ManagementSystem.Middleware
             {
                 success = false,
                 statusCode = (int)statusCode,
-                message = statusCode == HttpStatusCode.InternalServerError 
-                    ? "An unexpected internal error occurred. Our engineering team has been notified."
-                    : exception.Message,
-                details = exception.Message,
+                message = !string.IsNullOrWhiteSpace(exception.Message) ? exception.Message : "An unexpected internal error occurred.",
+                details = exception.InnerException?.Message ?? exception.Message,
                 errorType = exception.GetType().Name,
                 timestamp = DateTime.UtcNow
             };
