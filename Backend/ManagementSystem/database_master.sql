@@ -674,11 +674,11 @@ IF NOT EXISTS (SELECT 1 FROM Users)
 BEGIN
     INSERT INTO Users (FullName, Email, PasswordHash, Role, Department)
     VALUES 
-    ('System Administrator', 'admin@system.com', '$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 1, 'Executive IT'),
-    ('Alex Morgan', 'manager@system.com', '$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 2, 'Engineering'),
-    ('Rahul Sharma', 'rahul@system.com', '$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 3, 'Backend Dev'),
-    ('Priya Patel', 'priya@system.com', '$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 3, 'UI/UX Design'),
-    ('John Doe', 'user@system.com', '$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 3, 'QA Automation');
+    ('System Administrator', 'admin@system.com', '$2a$12$htJUGRkLlH0o3oRi9EermeHgE2rXeL8HkqyvbWsydFz..gYI8bkUy', 1, 'Executive IT'),
+    ('Alex Morgan', 'manager@system.com', '$2a$12$xhsvjmLNOzfxhLeoqyNQ3e4QzQD6dMGKNmHSKuokKOxLW1VZXTHz2', 2, 'Engineering'),
+    ('Rahul Sharma', 'rahul@system.com', '$2a$12$SGny1BHXjMU3U1jZQRgODuGiwduS4vKhzzKAcZd1qc2tgQkVJjWhK', 3, 'Backend Dev'),
+    ('Priya Patel', 'priya@system.com', '$2a$12$SGny1BHXjMU3U1jZQRgODuGiwduS4vKhzzKAcZd1qc2tgQkVJjWhK', 3, 'UI/UX Design'),
+    ('John Doe', 'user@system.com', '$2a$12$SGny1BHXjMU3U1jZQRgODuGiwduS4vKhzzKAcZd1qc2tgQkVJjWhK', 3, 'QA Automation');
 END
 GO
 
