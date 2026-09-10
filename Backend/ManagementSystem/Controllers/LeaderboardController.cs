@@ -31,10 +31,12 @@ namespace ManagementSystem.Controllers
     public class LeaderboardController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ILogger<LeaderboardController> _logger;
 
-        public LeaderboardController(AppDbContext context)
+        public LeaderboardController(AppDbContext context, ILogger<LeaderboardController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         /// <summary>
@@ -43,61 +45,69 @@ namespace ManagementSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> GetLeaderboard()
         {
-            var users = await _context.Users
-                .Where(u => !u.IsDeleted && u.Status == 1)
-                .Include(u => u.AssignedTasks)
-                .Include(u => u.TimeLogs)
-                .AsNoTracking()
-                .ToListAsync();
-
-            var leaderboard = new List<LeaderboardUserDto>();
-
-            foreach (var user in users)
+            try
             {
-                var completed = user.AssignedTasks.Where(t => t.Status == TaskStatusEnum.Done).ToList();
-                var onTime = completed.Count(t => !t.DueDate.HasValue || t.LastUpdatedDate <= t.DueDate.Value);
-                var totalHours = Math.Round((double)user.TimeLogs.Sum(l => l.DurationMinutes) / 60, 1);
+                var users = await _context.Users
+                    .Where(u => !u.IsDeleted && u.Status == 1)
+                    .Include(u => u.AssignedTasks)
+                    .Include(u => u.TimeLogs)
+                    .AsNoTracking()
+                    .ToListAsync();
 
-                // Score Calculation Formula:
-                // Completed * 15 + OnTime * 10 + Urgent/High Completed * 5 + Hours * 2
-                var highPriorityDone = completed.Count(t => t.Priority == TaskPriorityEnum.High || t.Priority == TaskPriorityEnum.Critical);
-                var score = (completed.Count * 15) + (onTime * 10) + (highPriorityDone * 5) + (int)(totalHours * 2);
+                var leaderboard = new List<LeaderboardUserDto>();
 
-                string badge = score switch
+                foreach (var user in users)
                 {
-                    >= 300 => "🚀 Velocity Champion",
-                    >= 200 => "⚡ Task Titan",
-                    >= 100 => "🎯 Goal Crusher",
-                    >= 50 => "🌟 Rising Star",
-                    _ => "🌱 Contributor"
-                };
+                    var completed = user.AssignedTasks.Where(t => t.Status == TaskStatusEnum.Done).ToList();
+                    var onTime = completed.Count(t => !t.DueDate.HasValue || t.LastUpdatedDate <= t.DueDate.Value);
+                    var totalHours = Math.Round((double)user.TimeLogs.Sum(l => l.DurationMinutes) / 60, 1);
 
-                leaderboard.Add(new LeaderboardUserDto
-                {
-                    UserId = user.Id,
-                    FullName = user.FullName,
-                    Email = user.Email,
-                    Role = user.Role.ToString(),
-                    Department = user.Department,
-                    CompletedTasksCount = completed.Count,
-                    OnTimeTasksCount = onTime,
-                    TotalHoursLogged = totalHours,
-                    TotalScore = score,
-                    Badge = badge,
-                    StreakDays = Math.Min(14, Math.Max(1, completed.Count % 10 + 2))
-                });
+                    // Score Calculation Formula:
+                    // Completed * 15 + OnTime * 10 + Urgent/High Completed * 5 + Hours * 2
+                    var highPriorityDone = completed.Count(t => t.Priority == TaskPriorityEnum.High || t.Priority == TaskPriorityEnum.Critical);
+                    var score = (completed.Count * 15) + (onTime * 10) + (highPriorityDone * 5) + (int)(totalHours * 2);
+
+                    string badge = score switch
+                    {
+                        >= 300 => "🚀 Velocity Champion",
+                        >= 200 => "⚡ Task Titan",
+                        >= 100 => "🎯 Goal Crusher",
+                        >= 50 => "🌟 Rising Star",
+                        _ => "🌱 Contributor"
+                    };
+
+                    leaderboard.Add(new LeaderboardUserDto
+                    {
+                        UserId = user.Id,
+                        FullName = user.FullName,
+                        Email = user.Email,
+                        Role = user.Role.ToString(),
+                        Department = user.Department,
+                        CompletedTasksCount = completed.Count,
+                        OnTimeTasksCount = onTime,
+                        TotalHoursLogged = totalHours,
+                        TotalScore = score,
+                        Badge = badge,
+                        StreakDays = Math.Min(14, Math.Max(1, completed.Count % 10 + 2))
+                    });
+                }
+
+                var ranked = leaderboard
+                    .OrderByDescending(u => u.TotalScore)
+                    .Select((u, index) =>
+                    {
+                        u.Rank = index + 1;
+                        return u;
+                    })
+                    .ToList();
+
+                return Ok(ranked);
             }
-
-            var ranked = leaderboard
-                .OrderByDescending(u => u.TotalScore)
-                .Select((u, index) =>
-                {
-                    u.Rank = index + 1;
-                    return u;
-                })
-                .ToList();
-
-            return Ok(ranked);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while generating leaderboard rankings.");
+                return StatusCode(500, new { message = "Failed to load leaderboard rankings", details = ex.Message });
+            }
         }
     }
 }
