@@ -31,7 +31,12 @@ namespace ManagementSystem.Models
         [Column(TypeName = "decimal(5,2)")]
         public decimal ProgressPercentage { get; set; } = 0.00m;
 
-        public int MilestoneStatus { get; set; } = 1; // 1 = Planned, 2 = InProgress, 3 = Achieved
+        [NotMapped]
+        public int MilestoneStatus
+        {
+            get => Status;
+            set => Status = value;
+        }
 
         public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
     }

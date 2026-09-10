@@ -43,7 +43,12 @@ namespace ManagementSystem.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal? Budget { get; set; }
 
-        public int ProjectStatus { get; set; } = 1; // 1 = Active, 2 = OnHold, 3 = Completed
+        [NotMapped]
+        public int ProjectStatus
+        {
+            get => Status;
+            set => Status = value;
+        }
 
         public ICollection<Milestone> Milestones { get; set; } = new List<Milestone>();
         public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
