@@ -170,12 +170,14 @@ namespace ManagementSystem.Data
                 .HasOne(td => td.Task)
                 .WithMany(t => t.Dependencies)
                 .HasForeignKey(td => td.TaskId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<TaskDependency>()
                 .HasOne(td => td.DependsOnTask)
                 .WithMany()
                 .HasForeignKey(td => td.DependsOnTaskId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // 10. TaskWatcher Entity
@@ -187,6 +189,7 @@ namespace ManagementSystem.Data
                 .HasOne(tw => tw.Task)
                 .WithMany(t => t.Watchers)
                 .HasForeignKey(tw => tw.TaskId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<TaskWatcher>()
@@ -200,11 +203,12 @@ namespace ManagementSystem.Data
                 .HasOne(tl => tl.Task)
                 .WithMany(t => t.TimeLogs)
                 .HasForeignKey(tl => tl.TaskId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<TaskTimeLog>()
                 .HasOne(tl => tl.User)
-                .WithMany()
+                .WithMany(u => u.TimeLogs)
                 .HasForeignKey(tl => tl.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -245,20 +249,29 @@ namespace ManagementSystem.Data
                 .HasOne(rt => rt.User)
                 .WithMany(u => u.RefreshTokens)
                 .HasForeignKey(rt => rt.UserId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // 15. AuditLog Indexes
+            modelBuilder.Entity<RefreshToken>()
+                .HasQueryFilter(rt => !rt.IsDeleted);
+
+            // 15. RolePermission Entity
+            modelBuilder.Entity<RolePermission>()
+                .HasQueryFilter(rp => !rp.IsDeleted);
+
+            // 16. AuditLog Indexes
             modelBuilder.Entity<AuditLog>()
                 .HasIndex(a => new { a.EntityName, a.EntityId });
 
             modelBuilder.Entity<AuditLog>()
                 .HasIndex(a => a.Timestamp);
 
-            // 16. TaskView Entity
+            // 17. TaskView Entity
             modelBuilder.Entity<TaskView>()
                 .HasOne(tv => tv.Task)
                 .WithMany()
                 .HasForeignKey(tv => tv.TaskId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<TaskView>()

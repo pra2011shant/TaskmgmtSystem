@@ -388,6 +388,29 @@ BEGIN
 END
 GO
 
+-- Schema Upgrade / Migration: Ensure columns exist on RolePermissions if table was created previously
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'RolePermissions')
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RolePermissions') AND name = 'Remarks')
+        ALTER TABLE RolePermissions ADD Remarks NVARCHAR(500) NULL;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RolePermissions') AND name = 'Status')
+        ALTER TABLE RolePermissions ADD Status INT NOT NULL DEFAULT 1;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RolePermissions') AND name = 'IsDeleted')
+        ALTER TABLE RolePermissions ADD IsDeleted BIT NOT NULL DEFAULT 0;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RolePermissions') AND name = 'CreatedDate')
+        ALTER TABLE RolePermissions ADD CreatedDate DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME();
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RolePermissions') AND name = 'LastUpdatedDate')
+        ALTER TABLE RolePermissions ADD LastUpdatedDate DATETIME2 NULL;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('RolePermissions') AND name = 'CreatedById')
+        ALTER TABLE RolePermissions ADD CreatedById INT NULL;
+END
+GO
+
 -- ==============================================================================================
 -- PART 2: PERFORMANCE OPTIMIZATION INDEXES
 -- ==============================================================================================
